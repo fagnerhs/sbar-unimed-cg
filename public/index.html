@@ -106,6 +106,15 @@
     .stat-number{font-size:24px;font-weight:700;color:var(--primary)}.stat-label{font-size:11px;color:var(--text-light);margin-top:4px}
     .password-wrapper{position:relative}.password-wrapper .form-input{padding-right:50px}
     .toggle-pass{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:20px;cursor:pointer;padding:8px;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center}
+    .multi-device-container{display:flex;flex-direction:column;gap:10px}
+    .device-item{background:#f8f9fa;border:1px solid var(--border);border-radius:10px;padding:12px;position:relative}
+    .device-item-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .device-item-title{font-size:13px;font-weight:700;color:var(--primary)}
+    .device-remove-btn{background:var(--danger);color:#fff;border:none;border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    .device-item .form-group{margin-bottom:10px}
+    .device-item .form-group:last-child{margin-bottom:0}
+    .device-item .form-group label{font-size:12px;color:var(--text-light)}
+    .device-item .form-input,.device-item .form-select{padding:10px 12px;font-size:14px}
   </style>
 </head>
 <body>
@@ -468,10 +477,9 @@ const PROF_CONFIG = {
       { type:'number', id:'peepEnf', label:'PEEP (cmH2O)', placeholder:'0-30', min:0, max:30 },
       { type:'select', id:'viaAereaEnf', label:'Via Aérea Artificial', options:['','Sem via aérea artificial','TOT (Tubo Orotraqueal)','TQT (Traqueostomia)','Máscara Laríngea'] },
       { type:'text', id:'ventObsEnf', label:'Observações Ventilação', placeholder:'Ex: aspiração TOT, pressão cuff...' },
-      { type:'select', id:'acessoVenoso', label:'Acesso Venoso', options:['','Periférico','Central','PICC','Flebotomia','Sem acesso'] },
+      { type:'multi_device', id:'acessosVenosos', label:'Acessos Venosos', deviceOptions:['Periférico','Central','PICC','Flebotomia','Port-a-Cath'], fields:['local','observacao'] },
       { type:'text', id:'infusoes', label:'Infusões/Drogas em curso', placeholder:'Medicações em BIC, soroterapia...' },
-      { type:'text', id:'sondasDesc', label:'Sondas/Drenos - Dispositivos', placeholder:'Ex: SVD, SNG, dreno de tórax...' },
-      { type:'text', id:'sondasObs', label:'Sondas/Drenos - Observações', placeholder:'Ex: débito, aspecto, fixação...' }
+      { type:'multi_device', id:'sondasDrenos', label:'Sondas e Drenos', deviceOptions:['SVD (Sonda Vesical de Demora)','SNG (Sonda Nasogástrica)','SNE (Sonda Nasoenteral)','Dreno de Tórax','Dreno Abdominal','Dreno de Jackson-Pratt','Dreno de Penrose','Cistostomia','Gastrostomia','Traqueostomia'], fields:['local','observacao'] }
     ],
     conducts: [
       { id:'curativos', label:'Curativos' },
@@ -501,10 +509,9 @@ const PROF_CONFIG = {
       { type:'number', id:'peepPed', label:'PEEP/CPAP (cmH2O)', placeholder:'0-15', min:0, max:30 },
       { type:'select', id:'viaAereaPed', label:'Via Aérea Artificial', options:['','Sem via aérea artificial','TOT (Tubo Orotraqueal)','TQT (Traqueostomia)','Cânula Nasal'] },
       { type:'text', id:'ventObsPed', label:'Observações Ventilação', placeholder:'Ex: nº TOT, fixação, aspiração...' },
-      { type:'select', id:'acessoVenosoPed', label:'Acesso Venoso', options:['','Periférico','PICC','Cateter Umbilical','Central','Sem acesso'] },
+      { type:'multi_device', id:'acessosVenososPed', label:'Acessos Venosos', deviceOptions:['Periférico','PICC','Cateter Umbilical','Central','Port-a-Cath'], fields:['local','observacao'] },
       { type:'text', id:'infusoesPed', label:'Infusões/Drogas em curso', placeholder:'Medicações em BIC, NPT, soroterapia...' },
-      { type:'text', id:'sondasDescPed', label:'Sondas/Drenos - Dispositivos', placeholder:'Ex: SOG, SVD, dreno torácico...' },
-      { type:'text', id:'sondasObsPed', label:'Sondas/Drenos - Observações', placeholder:'Ex: débito, aspecto, posicionamento...' },
+      { type:'multi_device', id:'sondasDrenosPed', label:'Sondas e Drenos', deviceOptions:['SOG (Sonda Orogástrica)','SNG (Sonda Nasogástrica)','SNE (Sonda Nasoenteral)','SVD (Sonda Vesical de Demora)','Dreno de Tórax','Dreno Abdominal','Gastrostomia','Jejunostomia'], fields:['local','observacao'] },
       { type:'select', id:'alimentacaoPed', label:'Alimentação', options:['','Seio Materno','Fórmula','Mista','SOG/SNE','Dieta Zero','NPT'] },
       { type:'text', id:'pesoPed', label:'Peso (g/kg)', placeholder:'Ex: 1250g ou 3.2kg' },
       { type:'select', id:'incubadora', label:'Suporte Térmico', options:['','Incubadora','Berço Aquecido','Berço Comum','Canguru'] }
@@ -941,7 +948,11 @@ function buildAssessmentForm() {
   let html = '';
   // Assessment fields
   cfg.assessFields.forEach(f => {
-    if (f.type === 'select') {
+    if (f.type === 'multi_device') {
+      html += `<div class="form-group"><label>${f.label}</label>
+        <div id="${f.id}_container" class="multi-device-container"></div>
+        <button type="button" class="btn btn-outline" style="margin-top:8px;padding:10px 16px;font-size:13px;width:auto" onclick="addDeviceItem('${f.id}','${encodeURIComponent(JSON.stringify(f.deviceOptions))}')">+ Adicionar ${f.label.split(' ')[0]}</button></div>`;
+    } else if (f.type === 'select') {
       html += `<div class="form-group"><label>${f.label}</label><select id="${f.id}" class="form-select">${f.options.map(o=>`<option value="${o}">${o||'Selecione...'}</option>`).join('')}</select></div>`;
     } else if (f.type === 'number') {
       html += `<div class="form-group"><label>${f.label}</label><input type="number" id="${f.id}" class="form-input" placeholder="${f.placeholder||''}" ${f.min!==undefined?'min="'+f.min+'"':''} ${f.max!==undefined?'max="'+f.max+'"':''}></div>`;
@@ -998,12 +1009,54 @@ function getConducts(){
   return conducts;
 }
 
+function addDeviceItem(fieldId, encodedOptions) {
+  const options = JSON.parse(decodeURIComponent(encodedOptions));
+  const container = document.getElementById(fieldId + '_container');
+  const idx = container.children.length;
+  const div = document.createElement('div');
+  div.className = 'device-item';
+  div.innerHTML = `
+    <div class="device-item-header">
+      <span class="device-item-title">Item ${idx+1}</span>
+      <button type="button" class="device-remove-btn" onclick="this.closest('.device-item').remove()">&times;</button>
+    </div>
+    <div class="form-group"><label>Tipo</label><select class="form-select device-type">${options.map(o=>`<option value="${o}">${o}</option>`).join('')}</select></div>
+    <div class="form-group"><label>Data de Inserção</label><input type="date" class="form-input device-date"></div>
+    <div class="form-group"><label>Local/Posição</label><input type="text" class="form-input device-local" placeholder="Ex: MSE, jugular D, flanco D..."></div>
+    <div class="form-group"><label>Observações</label><input type="text" class="form-input device-obs" placeholder="Ex: débito, aspecto, fixação..."></div>
+  `;
+  container.appendChild(div);
+}
+
+function removeDeviceItem(btn) {
+  btn.closest('.device-item').remove();
+}
+
+function getMultiDeviceData(fieldId) {
+  const container = document.getElementById(fieldId + '_container');
+  if (!container) return [];
+  const items = [];
+  container.querySelectorAll('.device-item').forEach(div => {
+    items.push({
+      tipo: div.querySelector('.device-type')?.value || '',
+      data: div.querySelector('.device-date')?.value || '',
+      local: div.querySelector('.device-local')?.value || '',
+      obs: div.querySelector('.device-obs')?.value || ''
+    });
+  });
+  return items;
+}
+
 function getAssessFields(){
   const cfg=PROF_CONFIG[getActiveProfKey()]; if(!cfg)return {};
   const data={};
   cfg.assessFields.forEach(f=>{
-    const el=document.getElementById(f.id);
-    if(el) data[f.id]={label:f.label, value:el.value};
+    if (f.type === 'multi_device') {
+      data[f.id] = { label: f.label, value: getMultiDeviceData(f.id), isMultiDevice: true };
+    } else {
+      const el=document.getElementById(f.id);
+      if(el) data[f.id]={label:f.label, value:el.value};
+    }
   });
   return data;
 }
@@ -1113,7 +1166,16 @@ function renderSbarRecords(records){
     const cfg=PROF_CONFIG[prof]||{};
     let assessHtml='';
     if(r.sbar.a.fields){
-      assessHtml=Object.values(r.sbar.a.fields).filter(f=>f.value).map(f=>`${f.label}: ${f.value}`).join(' | ');
+      const parts=[];
+      Object.values(r.sbar.a.fields).forEach(f=>{
+        if(f.isMultiDevice && Array.isArray(f.value) && f.value.length>0){
+          const devs=f.value.map(d=>`${d.tipo}${d.data?' ('+d.data+')':''}${d.local?' - '+d.local:''}${d.obs?' ['+d.obs+']':''}`).join('; ');
+          parts.push(`<strong>${f.label}:</strong> ${devs}`);
+        } else if(f.value && !f.isMultiDevice){
+          parts.push(`${f.label}: ${f.value}`);
+        }
+      });
+      assessHtml=parts.join(' | ');
     } else if(r.sbar.a.modoVent!==undefined){
       assessHtml=`${r.sbar.a.modoVent||'—'} | FiO2: ${r.sbar.a.fio2||'—'}% | PEEP: ${r.sbar.a.peep||'—'}`;
     }
