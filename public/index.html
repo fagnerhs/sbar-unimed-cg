@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1a237e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>SBAR Unimed CG</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icon-192.png">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--primary:#1a237e;--primary-light:#3949ab;--accent:#00bcd4;--success:#2e7d32;--danger:#c62828;--warning:#f57f17;--bg:#f5f5f5;--card-bg:#fff;--text:#212121;--text-light:#757575;--border:#e0e0e0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+    .header{background:var(--primary);color:#fff;padding:16px 20px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+    .header h1{font-size:20px;font-weight:700}.header-sub{font-size:12px;opacity:.8;margin-top:2px}
+    .header-actions{position:absolute;right:16px;top:50%;transform:translateY(-50%);display:flex;gap:8px}
+    .header-btn{background:rgba(255,255,255,.15);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);display:flex;z-index:90;box-shadow:0 -2px 8px rgba(0,0,0,.06)}
+    .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px;cursor:pointer;min-height:56px;color:var(--text-light);font-size:11px;font-weight:600;gap:2px;border:none;background:none}
+    .nav-item.active{color:var(--primary)}.nav-item .nav-icon{font-size:22px}
+    .login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:linear-gradient(135deg,var(--primary) 0%,var(--primary-light) 100%)}
+    .login-card{background:#fff;border-radius:16px;padding:40px 32px;width:100%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,.2);max-height:95vh;overflow-y:auto}
+    .login-logo{text-align:center;margin-bottom:32px}.login-logo h2{color:var(--primary);font-size:24px;margin-bottom:4px}.login-logo p{color:var(--text-light);font-size:14px}
+    .form-group{margin-bottom:20px}.form-group label{display:block;font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px}
+    .form-input{width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:10px;font-size:16px;transition:border-color .2s;outline:none}.form-input:focus{border-color:var(--primary)}
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:14px 24px;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;min-height:48px;min-width:48px;transition:all .2s}
+    .btn-primary{background:var(--primary);color:#fff;width:100%}.btn-primary:hover{background:var(--primary-light)}
+    .btn-success{background:var(--success);color:#fff}.btn-danger{background:var(--danger);color:#fff}.btn-warning{background:var(--warning);color:#fff}
+    .btn-outline{background:transparent;border:2px solid var(--primary);color:var(--primary)}
+    .register-link{text-align:center;margin-top:16px;font-size:14px;color:var(--text-light)}.register-link a{color:var(--primary);font-weight:600;cursor:pointer;text-decoration:none}
+    .dashboard{padding:16px;padding-bottom:80px}
+    .sector-filter{display:flex;gap:8px;overflow-x:auto;padding:8px 0 16px;-webkit-overflow-scrolling:touch}.sector-filter::-webkit-scrollbar{display:none}
+    .sector-chip{flex-shrink:0;padding:10px 18px;border-radius:20px;font-size:13px;font-weight:600;border:2px solid var(--border);background:#fff;cursor:pointer;min-height:44px;display:flex;align-items:center;white-space:nowrap}
+    .sector-chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .patient-card{background:var(--card-bg);border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);border-left:5px solid var(--success);cursor:pointer;transition:transform .1s}
+    .patient-card:active{transform:scale(.98)}.patient-card.critical{border-left-color:var(--danger)}.patient-card.discharged{border-left-color:var(--text-light);opacity:.7}
+    .patient-card-header{display:flex;justify-content:space-between;align-items:center}
+    .patient-name{font-size:16px;font-weight:700}.patient-bed{font-size:13px;color:var(--text-light);margin-top:2px}
+    .patient-status{padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;text-transform:uppercase}
+    .status-stable{background:#e8f5e9;color:var(--success)}.status-critical{background:#ffebee;color:var(--danger)}.status-discharged{background:#f5f5f5;color:var(--text-light)}
+    .patient-card-actions{display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+    .card-action-btn{flex:1;padding:10px 8px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:12px;font-weight:600;cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:center;gap:4px;transition:all .2s}
+    .card-action-btn:active{transform:scale(.95)}
+    .card-action-btn.action-sbar{border-color:var(--primary);color:var(--primary)}.card-action-btn.action-history{border-color:var(--accent);color:#00838f}
+    .card-action-btn.action-discharge{border-color:var(--warning);color:var(--warning)}.card-action-btn.action-readmit{border-color:var(--success);color:var(--success)}
+    .fab{position:fixed;bottom:76px;right:24px;width:60px;height:60px;border-radius:50%;background:var(--primary);color:#fff;border:none;font-size:28px;box-shadow:0 4px 16px rgba(0,0,0,.3);cursor:pointer;z-index:50;display:flex;align-items:center;justify-content:center}
+    .screen{display:none}.screen.active{display:block}
+    .form-screen{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:200;overflow-y:auto;display:none}.form-screen.active{display:block}
+    .form-header{background:var(--primary);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}.form-header h2{font-size:18px}
+    .back-btn{background:none;border:none;color:#fff;font-size:24px;cursor:pointer;width:44px;height:44px;display:flex;align-items:center;justify-content:center}
+    .stepper{display:flex;justify-content:center;padding:16px;gap:4px;background:#fff;border-bottom:1px solid var(--border)}
+    .step-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;max-width:80px}
+    .step-circle{width:36px;height:36px;border-radius:50%;background:var(--border);color:var(--text-light);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
+    .step-item.active .step-circle{background:var(--primary);color:#fff}.step-item.done .step-circle{background:var(--success);color:#fff}
+    .step-label{font-size:11px;color:var(--text-light);font-weight:600}.step-item.active .step-label{color:var(--primary)}
+    .form-content{padding:20px}.step-panel{display:none}.step-panel.active{display:block}
+    .form-nav{display:flex;gap:12px;padding:20px}.form-nav .btn{flex:1}
+    .conduct-group{margin-bottom:20px}.conduct-label{font-size:14px;font-weight:700;margin-bottom:8px;color:var(--text)}
+    .conduct-options{display:flex;flex-wrap:wrap;gap:8px}
+    .conduct-btn{padding:12px 16px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:13px;font-weight:600;cursor:pointer;min-height:44px;min-width:44px;transition:all .2s}
+    .conduct-btn.selected{border-color:var(--primary);background:#e8eaf6;color:var(--primary)}
+    .conduct-btn[data-value="Iniciado"].selected{border-color:var(--success);background:#e8f5e9;color:var(--success)}
+    .conduct-btn[data-value="Pausado"].selected{border-color:var(--warning);background:#fff8e1;color:var(--warning)}
+    .conduct-btn[data-value="Finalizado"].selected{border-color:var(--accent);background:#e0f7fa;color:#00838f}
+    .conduct-btn[data-value="Não Indicado"].selected,.conduct-btn[data-value="N/A"].selected{border-color:var(--text-light);background:#f5f5f5;color:var(--text-light)}
+    .form-textarea{width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:10px;font-size:15px;font-family:inherit;min-height:120px;resize:vertical;outline:none}.form-textarea:focus{border-color:var(--primary)}
+    .form-select{width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:10px;font-size:16px;outline:none;background:#fff;appearance:none;-webkit-appearance:none}.form-select:focus{border-color:var(--primary)}
+    .history-item{background:#fff;border-radius:10px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+    .history-meta{font-size:12px;color:var(--text-light);margin-bottom:6px}.history-section{margin-top:8px}
+    .history-section strong{font-size:13px;color:var(--primary)}.history-section p{font-size:14px;margin-top:2px}
+    .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:300;display:none;align-items:center;justify-content:center;padding:24px}
+    .modal-overlay.active{display:flex}
+    .modal-card{background:#fff;border-radius:16px;padding:32px 24px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto}.modal-card h3{font-size:20px;margin-bottom:20px;color:var(--primary)}
+    .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;z-index:999;display:none;animation:fadeIn .3s}
+    .toast.show{display:block}@keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+    .empty-state{text-align:center;padding:60px 20px;color:var(--text-light)}.empty-state .icon{font-size:48px;margin-bottom:12px}.empty-state p{font-size:15px}
+    .checkbox-row{display:flex;align-items:center;gap:12px;padding:12px 0}.checkbox-row input[type="checkbox"]{width:24px;height:24px;accent-color:var(--primary)}
+    .search-bar{position:relative;margin-bottom:16px}
+    .search-input{width:100%;padding:14px 16px 14px 44px;border:2px solid var(--border);border-radius:12px;font-size:15px;outline:none;background:#fff}.search-input:focus{border-color:var(--primary)}
+    .search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;color:var(--text-light)}
+    .discharge-info{font-size:11px;color:var(--text-light);margin-top:4px}
+    .tab-content{display:none}.tab-content.active{display:block}
+    .prof-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase;margin-left:6px}
+    .section-divider{margin:20px 0;border:none;border-top:1px solid var(--border)}
+    .assess-title{font-size:16px;margin-bottom:16px;color:var(--primary)}
+    .admin-card{background:var(--card-bg);border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);border-left:5px solid var(--accent)}
+    .admin-card.pending{border-left-color:var(--warning)}
+    .admin-card.active{border-left-color:var(--success)}
+    .admin-card.inactive{border-left-color:var(--danger);opacity:.7}
+    .admin-card-header{display:flex;justify-content:space-between;align-items:flex-start}
+    .admin-card-info{flex:1}.admin-card-name{font-size:16px;font-weight:700}.admin-card-detail{font-size:13px;color:var(--text-light);margin-top:2px}
+    .admin-badge{padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;text-transform:uppercase;white-space:nowrap}
+    .badge-pending{background:#fff8e1;color:var(--warning)}.badge-active{background:#e8f5e9;color:var(--success)}.badge-inactive{background:#ffebee;color:var(--danger)}
+    .admin-actions{display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+    .admin-btn{flex:1;padding:10px 8px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:12px;font-weight:600;cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:center;gap:4px;transition:all .2s}
+    .admin-btn:active{transform:scale(.95)}
+    .admin-btn.approve{border-color:var(--success);color:var(--success)}.admin-btn.deactivate{border-color:var(--danger);color:var(--danger)}.admin-btn.reactivate{border-color:var(--primary);color:var(--primary)}
+    .admin-filter{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:8px}
+    .admin-filter-btn{padding:10px 16px;border-radius:20px;font-size:13px;font-weight:600;border:2px solid var(--border);background:#fff;cursor:pointer;min-height:44px;white-space:nowrap}
+    .admin-filter-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .admin-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+    .stat-card{background:#fff;border-radius:10px;padding:14px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+    .stat-number{font-size:24px;font-weight:700;color:var(--primary)}.stat-label{font-size:11px;color:var(--text-light);margin-top:4px}
+    .password-wrapper{position:relative}.password-wrapper .form-input{padding-right:50px}
+    .toggle-pass{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:20px;cursor:pointer;padding:8px;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center}
+  </style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="login-screen screen active">
+  <div class="login-card">
+    <div class="login-logo">
+      <h2>🏥 SBAR Unimed CG</h2>
+      <p>Passagem de Plantão Multiprofissional</p>
+    </div>
+    <div id="loginForm">
+      <div class="form-group">
+        <label>E-mail</label>
+        <input type="email" id="loginEmail" class="form-input" placeholder="seu@unimedcg.coop.br">
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <div class="password-wrapper">
+          <input type="password" id="loginPassword" class="form-input" placeholder="••••••••">
+          <button type="button" class="toggle-pass" onclick="togglePassword('loginPassword', this)">🙈</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="handleLogin()">Entrar</button>
+      <div class="register-link">Não tem conta? <a onclick="showRegister()">Cadastre-se</a></div>
+    </div>
+    <div id="registerForm" style="display:none;">
+      <div class="form-group">
+        <label>Nome Completo</label>
+        <input type="text" id="regName" class="form-input" placeholder="Nome completo">
+      </div>
+      <div class="form-group">
+        <label>E-mail</label>
+        <input type="email" id="regEmail" class="form-input" placeholder="seu@unimedcg.coop.br">
+        <span style="font-size:12px;color:var(--text-light);margin-top:4px;display:block;">Apenas e-mails @unimedcg.coop.br</span>
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <div class="password-wrapper">
+          <input type="password" id="regPassword" class="form-input" placeholder="Mínimo 6 caracteres">
+          <button type="button" class="toggle-pass" onclick="togglePassword('regPassword', this)">🙈</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Profissão</label>
+        <select id="regProfissao" class="form-select" onchange="updateRegConselho()">
+          <option value="">Selecione...</option>
+          <option value="Fisioterapia">Fisioterapia</option>
+          <option value="Enfermagem">Enfermagem</option>
+          <option value="Nutrição">Nutrição</option>
+          <option value="Psicologia">Psicologia</option>
+          <option value="Serviço Social">Serviço Social</option>
+          <option value="Odontologia">Odontologia</option>
+          <option value="Lactário">Lactário</option>
+          <option value="Fonoaudiologia">Fonoaudiologia</option>
+          <option value="Farmácia Clínica">Farmácia Clínica</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label id="regConselhoLabel">Registro Profissional</label>
+        <input type="text" id="regConselho" class="form-input" placeholder="Nº do conselho">
+      </div>
+      <div class="form-group">
+        <label>Setor Principal</label>
+        <select id="regSetor" class="form-select">
+          <option value="">Selecione...</option>
+          <option>PA-Adulto</option><option>PA-PED</option>
+          <option>UTI 1</option><option>UTI 2</option><option>UCO</option><option>UTI Mista</option>
+          <option>1° Andar</option><option>3° Andar</option><option>4° Andar</option><option>5° Andar</option><option>6° Andar</option><option>7° Andar</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="handleRegister()">Cadastrar</button>
+      <div class="register-link">Já tem conta? <a onclick="showLogin()">Fazer Login</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD SCREEN -->
+<div id="dashboardScreen" class="screen">
+  <div class="header">
+    <h1>SBAR Unimed CG</h1>
+    <div class="header-sub" id="userDisplay"></div>
+    <div class="header-actions">
+      <button class="header-btn" onclick="handleLogout()" title="Sair">⏻</button>
+    </div>
+  </div>
+  <div id="tabAtivos" class="tab-content active">
+    <div class="dashboard">
+      <div class="sector-filter" id="sectorFilter"></div>
+      <div id="patientList"></div>
+    </div>
+  </div>
+  <div id="tabTodos" class="tab-content">
+    <div class="dashboard">
+      <div class="search-bar"><span class="search-icon">🔍</span><input type="text" class="search-input" id="searchAllPatients" placeholder="Buscar paciente por nome, leito ou setor..." oninput="renderAllPatients()"></div>
+      <div id="allPatientsList"></div>
+    </div>
+  </div>
+  <div id="tabAdmin" class="tab-content">
+    <div class="dashboard">
+      <h3 style="font-size:18px;margin-bottom:16px;color:var(--primary);">⚙️ Painel Administrativo</h3>
+      <div class="admin-stats" id="adminStats"></div>
+      <div class="admin-filter" id="adminFilter"></div>
+      <div class="search-bar"><span class="search-icon">🔍</span><input type="text" class="search-input" id="searchUsers" placeholder="Buscar por nome, e-mail ou profissão..." oninput="renderAdminUsers()"></div>
+      <div id="adminUserList"></div>
+    </div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-item active" id="navAtivos" onclick="switchTab('ativos')"><span class="nav-icon">🏥</span>Ativos</button>
+    <button class="nav-item" id="navTodos" onclick="switchTab('todos')"><span class="nav-icon">📋</span>Todos</button>
+    <button class="nav-item" id="navAdmin" onclick="switchTab('admin')" style="display:none;"><span class="nav-icon">⚙️</span>Admin</button>
+    <button class="nav-item" id="navAdd" onclick="showAddPatient()"><span class="nav-icon">➕</span>Novo</button>
+  </div>
+  <button class="fab" onclick="showAddPatient()" title="Adicionar Paciente">+</button>
+</div>
+
+<!-- SBAR FORM SCREEN -->
+<div id="sbarFormScreen" class="form-screen">
+  <div class="form-header">
+    <button class="back-btn" onclick="closeSbarForm()">←</button>
+    <h2 id="sbarFormTitle">Passagem SBAR</h2>
+  </div>
+  <div class="stepper">
+    <div class="step-item active" data-step="0"><div class="step-circle">S</div><div class="step-label">Situação</div></div>
+    <div class="step-item" data-step="1"><div class="step-circle">B</div><div class="step-label">Background</div></div>
+    <div class="step-item" data-step="2"><div class="step-circle">A</div><div class="step-label">Avaliação</div></div>
+    <div class="step-item" data-step="3"><div class="step-circle">R</div><div class="step-label">Recomendação</div></div>
+  </div>
+  <div class="form-content">
+    <div class="step-panel active" data-panel="0">
+      <div class="form-group"><label>S - Situação Atual</label><textarea class="form-textarea" id="sbarS" placeholder="Descreva a situação atual do paciente..."></textarea></div>
+    </div>
+    <div class="step-panel" data-panel="1">
+      <div class="form-group"><label>B - Background (Histórico Clínico)</label><textarea class="form-textarea" id="sbarB" placeholder="Histórico relevante, comorbidades, evolução recente..."></textarea></div>
+    </div>
+    <div class="step-panel" data-panel="2">
+      <div id="assessmentContainer"></div>
+    </div>
+    <div class="step-panel" data-panel="3">
+      <div class="form-group"><label>R - Recomendação</label><textarea class="form-textarea" id="sbarR" placeholder="Recomendações para o próximo plantão..." style="min-height:180px;"></textarea></div>
+      <p style="font-size:12px;color:var(--text-light);margin-top:8px;">* Sugestões automáticas são inseridas com base nas condutas selecionadas.</p>
+    </div>
+  </div>
+  <div class="form-nav">
+    <button class="btn btn-outline" id="prevBtn" onclick="prevStep()" style="display:none;">Anterior</button>
+    <button class="btn btn-primary" id="nextBtn" onclick="nextStep()">Próximo</button>
+  </div>
+</div>
+
+<!-- PATIENT HISTORY SCREEN (filtered by profession) -->
+<div id="historyScreen" class="form-screen">
+  <div class="form-header"><button class="back-btn" onclick="closeHistory()">←</button><h2 id="historyTitle">Histórico</h2></div>
+  <div class="form-content" id="historyContent"></div>
+</div>
+
+<!-- MULTIDISCIPLINARY SCREEN (all professions) -->
+<div id="multiScreen" class="form-screen">
+  <div class="form-header" style="background:#9c27b0;"><button class="back-btn" onclick="closeMulti()">←</button><h2 id="multiTitle">👥 Multidisciplinar</h2></div>
+  <div style="padding:12px 16px;background:#f3e5f5;">
+    <div class="sector-filter" id="multiProfFilter"></div>
+  </div>
+  <div class="form-content" id="multiContent" style="padding-top:8px;"></div>
+</div>
+
+<!-- ADD PATIENT MODAL -->
+<div class="modal-overlay" id="addPatientModal">
+  <div class="modal-card">
+    <h3>Novo Paciente</h3>
+    <div class="form-group"><label>Nome / Iniciais</label><input type="text" id="patientName" class="form-input" placeholder="Ex: J.S.O."></div>
+    <div class="form-group"><label>Leito</label><input type="text" id="patientBed" class="form-input" placeholder="Ex: UTI1-05"></div>
+    <div class="form-group"><label>Setor</label>
+      <select id="patientSector" class="form-select"><option value="">Selecione...</option>
+        <option>PA-Adulto</option><option>PA-PED</option><option>UTI 1</option><option>UTI 2</option><option>UCO</option><option>UTI Mista</option>
+        <option>1° Andar</option><option>3° Andar</option><option>4° Andar</option><option>5° Andar</option><option>6° Andar</option><option>7° Andar</option>
+      </select>
+    </div>
+    <div class="checkbox-row"><input type="checkbox" id="patientCritical"><label for="patientCritical" style="font-size:15px;font-weight:600;">Paciente Crítico</label></div>
+    <div style="display:flex;gap:12px;margin-top:20px;">
+      <button class="btn btn-outline" onclick="closeAddPatient()" style="flex:1;">Cancelar</button>
+      <button class="btn btn-primary" onclick="addPatient()" style="flex:1;">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- DISCHARGE MODAL -->
+<div class="modal-overlay" id="dischargeModal">
+  <div class="modal-card">
+    <h3>⚠️ Alta / Transferência</h3>
+    <div id="dischargePatientInfo" style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:20px;"></div>
+    <div class="form-group"><label>Tipo de Movimentação</label>
+      <div style="display:flex;flex-direction:column;gap:10px;" id="dischargeTypeGroup">
+        <button class="conduct-btn selected" data-dtype="casa" onclick="selectDischargeType(this)" style="text-align:left;padding:14px 16px;">🏠 Alta para Casa</button>
+        <button class="conduct-btn" data-dtype="transferencia" onclick="selectDischargeType(this)" style="text-align:left;padding:14px 16px;">🔄 Transferência de Setor</button>
+        <button class="conduct-btn" data-dtype="obito" onclick="selectDischargeType(this)" style="text-align:left;padding:14px 16px;">⚫ Óbito</button>
+      </div>
+    </div>
+    <div class="form-group" id="transferSectorGroup" style="display:none;"><label>Transferir para qual setor?</label>
+      <select id="transferSector" class="form-select"><option value="">Selecione o setor destino...</option>
+        <option>PA-Adulto</option><option>PA-PED</option><option>UTI 1</option><option>UTI 2</option><option>UCO</option><option>UTI Mista</option>
+        <option>1° Andar</option><option>3° Andar</option><option>4° Andar</option><option>5° Andar</option><option>6° Andar</option><option>7° Andar</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Observação (opcional)</label><textarea class="form-textarea" id="dischargeNote" placeholder="Observações..." style="min-height:80px;"></textarea></div>
+    <div style="display:flex;gap:12px;">
+      <button class="btn btn-outline" onclick="closeDischargeModal()" style="flex:1;">Cancelar</button>
+      <button class="btn btn-warning" onclick="confirmDischarge()" style="flex:1;">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- READMIT MODAL -->
+<div class="modal-overlay" id="readmitModal">
+  <div class="modal-card">
+    <h3>🔄 Reinternação</h3>
+    <div id="readmitPatientInfo" style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:20px;"></div>
+    <div class="form-group"><label>Internar em qual setor?</label>
+      <select id="readmitSector" class="form-select"><option value="">Selecione o setor...</option>
+        <option>PA-Adulto</option><option>PA-PED</option><option>UTI 1</option><option>UTI 2</option><option>UCO</option><option>UTI Mista</option>
+        <option>1° Andar</option><option>3° Andar</option><option>4° Andar</option><option>5° Andar</option><option>6° Andar</option><option>7° Andar</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Novo Leito</label><input type="text" id="readmitBed" class="form-input" placeholder="Ex: UTI1-05"></div>
+    <div class="checkbox-row"><input type="checkbox" id="readmitCritical"><label for="readmitCritical" style="font-size:15px;font-weight:600;">Paciente Crítico</label></div>
+    <div style="display:flex;gap:12px;margin-top:12px;">
+      <button class="btn btn-outline" onclick="closeReadmitModal()" style="flex:1;">Cancelar</button>
+      <button class="btn btn-success" onclick="confirmReadmit()" style="flex:1;">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGE PASSWORD MODAL -->
+<div class="modal-overlay" id="changePassModal">
+  <div class="modal-card">
+    <h3>🔒 Alterar Senha</h3>
+    <div id="changePassUserInfo" style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:20px;"></div>
+    <div class="form-group">
+      <label>Nova Senha</label>
+      <div class="password-wrapper">
+        <input type="password" id="newPassword" class="form-input" placeholder="Mínimo 6 caracteres">
+        <button type="button" class="toggle-pass" onclick="togglePassword('newPassword', this)">🙈</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Confirmar Nova Senha</label>
+      <div class="password-wrapper">
+        <input type="password" id="confirmPassword" class="form-input" placeholder="Repita a senha">
+        <button type="button" class="toggle-pass" onclick="togglePassword('confirmPassword', this)">🙈</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;">
+      <button class="btn btn-outline" onclick="closeChangePassModal()" style="flex:1;">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmChangePass()" style="flex:1;">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ DATABASE (Server API + Local Cache) ============
+const API_BASE = window.location.origin + '/api';
+
+// Local cache for fast rendering
+let _usersCache = [];
+let _patientsCache = [];
+let _sbarCache = [];
+
+const DB = {
+  // Sync methods (use cache)
+  getUsers(){ return _usersCache; },
+  saveUsers(u){ _usersCache = u; },
+  getPatients(){ return _patientsCache; },
+  savePatients(p){ _patientsCache = p; },
+  getSBAR(){ return _sbarCache; },
+  saveSBAR(r){ _sbarCache = r; },
+  getCurrentUser(){ return JSON.parse(localStorage.getItem('sbar_current_user')||'null'); },
+  setCurrentUser(u){ localStorage.setItem('sbar_current_user', JSON.stringify(u)); },
+  clearCurrentUser(){ localStorage.removeItem('sbar_current_user'); },
+
+  // Async API methods
+  async fetchUsers() { const r = await fetch(API_BASE+'/users'); _usersCache = await r.json(); return _usersCache; },
+  async fetchPatients() { const r = await fetch(API_BASE+'/patients'); _patientsCache = await r.json(); return _patientsCache; },
+  async fetchSBAR() { const r = await fetch(API_BASE+'/sbar'); _sbarCache = await r.json(); return _sbarCache; },
+
+  async apiLogin(email, password) {
+    const r = await fetch(API_BASE+'/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password}) });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error);
+    return data;
+  },
+  async apiRegister(user) {
+    const r = await fetch(API_BASE+'/users', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(user) });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error);
+    return data;
+  },
+  async apiUpdateUser(id, updates) {
+    const r = await fetch(API_BASE+'/users/'+id, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(updates) });
+    return await r.json();
+  },
+  async apiDeleteUser(id) {
+    await fetch(API_BASE+'/users/'+id, { method:'DELETE' });
+  },
+  async apiAddPatient(patient) {
+    const r = await fetch(API_BASE+'/patients', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(patient) });
+    return await r.json();
+  },
+  async apiUpdatePatient(id, updates) {
+    const r = await fetch(API_BASE+'/patients/'+id, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(updates) });
+    return await r.json();
+  },
+  async apiAddSBAR(record) {
+    const r = await fetch(API_BASE+'/sbar', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(record) });
+    return await r.json();
+  }
+};
+
+// ============ PROFESSION CONFIGS ============
+const PROF_CONFIG = {
+  'Fisioterapia': {
+    conselho: 'CREFITO', icon: '🫁', color: '#1565c0',
+    assessFields: [
+      { type:'select', id:'modoVent', label:'Modo Ventilatório', options:['','Ar Ambiente','Cateter Nasal','Máscara de Venturi','CNAF','VNI - CPAP','VNI - BiPAP','VMI - VCV','VMI - PCV','VMI - PSV','VMI - SIMV','Tubo T'] },
+      { type:'number', id:'fio2', label:'FiO2 (%)', placeholder:'21-100', min:21, max:100 },
+      { type:'number', id:'peep', label:'PEEP (cmH2O)', placeholder:'0-30', min:0, max:30 },
+      { type:'number', id:'pressaoSup', label:'Pressão de Suporte / P Insp (cmH2O)', placeholder:'0-40', min:0, max:40 },
+      { type:'number', id:'volCorr', label:'Volume Corrente (mL)', placeholder:'200-800', min:0, max:1500 },
+      { type:'number', id:'freqResp', label:'FR programada (irpm)', placeholder:'10-30', min:0, max:60 },
+      { type:'select', id:'viaAerea', label:'Via Aérea Artificial', options:['','Sem via aérea artificial','TOT (Tubo Orotraqueal)','TQT (Traqueostomia)','Máscara Laríngea'] },
+      { type:'text', id:'paramVentObs', label:'Observações VM', placeholder:'Ex: Vt 450, Tin 0.9, sensibilidade...' }
+    ],
+    conducts: [
+      { id:'desmame', label:'Desmame Ventilatório' },
+      { id:'vni', label:'VNI' },
+      { id:'progressao', label:'Progressão Motora' },
+      { id:'tmi', label:'TMI (Treinamento Muscular Inspiratório)' },
+      { id:'eletro', label:'Eletroestimulação' }
+    ],
+    conductTitle: 'Condutas Fisioterapêuticas',
+    autoRec(c){ let r=[];
+      if(c.desmame==='Iniciado') r.push('Manter protocolo de desmame conforme tolerância hemodinâmica.');
+      if(c.desmame==='Pausado') r.push('Reavaliar critérios para retomada do desmame ventilatório.');
+      if(c.vni==='Iniciado') r.push('Monitorar adaptação à VNI e sinais de intolerância.');
+      if(c.progressao==='Iniciado') r.push('Dar continuidade à progressão motora conforme protocolo institucional.');
+      if(c.tmi==='Iniciado') r.push('Manter TMI com carga atual e reavaliar em 48h.');
+      if(c.eletro==='Iniciado') r.push('Manter eletroestimulação conforme parâmetros estabelecidos.');
+      return r;
+    }
+  },
+  'Enfermagem': {
+    conselho: 'COREN', icon: '💉', color: '#c62828',
+    hasSubProfile: true,
+    subProfiles: ['Adulto', 'Neonatal/Pediatria'],
+    assessFields: [
+      { type:'select', id:'nivelConsc', label:'Nível de Consciência', options:['','Alerta','Sonolento','Torporoso','Comatoso'] },
+      { type:'select', id:'padResp', label:'Padrão Respiratório', options:['','Eupneico','Taquipneico','Bradipneico','Dispneico'] },
+      { type:'text', id:'sinaisVitais', label:'Sinais Vitais (PA, FC, FR, T, SpO2)', placeholder:'Ex: PA 120x80, FC 78, FR 18, T 36.5, SpO2 97%' },
+      { type:'select', id:'modoVentEnf', label:'Suporte Ventilatório', options:['','Ar Ambiente','Cateter Nasal','Máscara de Venturi','CNAF','VNI - CPAP','VNI - BiPAP','VMI - VCV','VMI - PCV','VMI - PSV','VMI - SIMV','Tubo T'] },
+      { type:'number', id:'fio2Enf', label:'FiO2 (%)', placeholder:'21-100', min:21, max:100 },
+      { type:'number', id:'peepEnf', label:'PEEP (cmH2O)', placeholder:'0-30', min:0, max:30 },
+      { type:'select', id:'viaAereaEnf', label:'Via Aérea Artificial', options:['','Sem via aérea artificial','TOT (Tubo Orotraqueal)','TQT (Traqueostomia)','Máscara Laríngea'] },
+      { type:'text', id:'ventObsEnf', label:'Observações Ventilação', placeholder:'Ex: aspiração TOT, pressão cuff...' },
+      { type:'select', id:'acessoVenoso', label:'Acesso Venoso', options:['','Periférico','Central','PICC','Flebotomia','Sem acesso'] },
+      { type:'text', id:'infusoes', label:'Infusões/Drogas em curso', placeholder:'Medicações em BIC, soroterapia...' },
+      { type:'text', id:'sondasDesc', label:'Sondas/Drenos - Dispositivos', placeholder:'Ex: SVD, SNG, dreno de tórax...' },
+      { type:'text', id:'sondasObs', label:'Sondas/Drenos - Observações', placeholder:'Ex: débito, aspecto, fixação...' }
+    ],
+    conducts: [
+      { id:'curativos', label:'Curativos' },
+      { id:'sondas', label:'Sondas/Drenos' },
+      { id:'banho', label:'Banho/Higiene' },
+      { id:'mudDecubito', label:'Mudança de Decúbito' },
+      { id:'isolamento', label:'Precaução/Isolamento' }
+    ],
+    conductTitle: 'Condutas de Enfermagem - Adulto',
+    autoRec(c){ let r=[];
+      if(c.curativos==='Iniciado') r.push('Manter troca de curativos conforme protocolo.');
+      if(c.mudDecubito==='Iniciado') r.push('Manter mudança de decúbito a cada 2h.');
+      if(c.isolamento==='Iniciado') r.push('Manter precauções de isolamento conforme CCIH.');
+      return r;
+    }
+  },
+  'Enfermagem_NP': {
+    conselho: 'COREN', icon: '👶', color: '#e91e63',
+    displayName: 'Enfermagem Neonatal/Pediatria',
+    parentProf: 'Enfermagem',
+    assessFields: [
+      { type:'select', id:'nivelConscPed', label:'Nível de Consciência', options:['','Ativo/Reativo','Hipoativo','Letárgico','Não responsivo'] },
+      { type:'select', id:'padRespPed', label:'Padrão Respiratório', options:['','Eupneico','Taquipneico','Bradipneico','Dispneico','Apneia'] },
+      { type:'text', id:'sinaisVitaisPed', label:'Sinais Vitais (FC, FR, T, SpO2, PAM)', placeholder:'Ex: FC 140, FR 42, T 36.8, SpO2 96%, PAM 45' },
+      { type:'select', id:'modoVentPed', label:'Suporte Ventilatório', options:['','Ar Ambiente','Cateter Nasal','Hood/Capacete','CPAP Nasal','VNI','VMI - VCV','VMI - PCV','VMI - PSV','VMI - SIMV','VAFO (Alta Frequência)'] },
+      { type:'number', id:'fio2Ped', label:'FiO2 (%)', placeholder:'21-100', min:21, max:100 },
+      { type:'number', id:'peepPed', label:'PEEP/CPAP (cmH2O)', placeholder:'0-15', min:0, max:30 },
+      { type:'select', id:'viaAereaPed', label:'Via Aérea Artificial', options:['','Sem via aérea artificial','TOT (Tubo Orotraqueal)','TQT (Traqueostomia)','Cânula Nasal'] },
+      { type:'text', id:'ventObsPed', label:'Observações Ventilação', placeholder:'Ex: nº TOT, fixação, aspiração...' },
+      { type:'select', id:'acessoVenosoPed', label:'Acesso Venoso', options:['','Periférico','PICC','Cateter Umbilical','Central','Sem acesso'] },
+      { type:'text', id:'infusoesPed', label:'Infusões/Drogas em curso', placeholder:'Medicações em BIC, NPT, soroterapia...' },
+      { type:'text', id:'sondasDescPed', label:'Sondas/Drenos - Dispositivos', placeholder:'Ex: SOG, SVD, dreno torácico...' },
+      { type:'text', id:'sondasObsPed', label:'Sondas/Drenos - Observações', placeholder:'Ex: débito, aspecto, posicionamento...' },
+      { type:'select', id:'alimentacaoPed', label:'Alimentação', options:['','Seio Materno','Fórmula','Mista','SOG/SNE','Dieta Zero','NPT'] },
+      { type:'text', id:'pesoPed', label:'Peso (g/kg)', placeholder:'Ex: 1250g ou 3.2kg' },
+      { type:'select', id:'incubadora', label:'Suporte Térmico', options:['','Incubadora','Berço Aquecido','Berço Comum','Canguru'] }
+    ],
+    conducts: [
+      { id:'curativosPed', label:'Curativos/Coto Umbilical' },
+      { id:'sondasPed', label:'Sondas/Drenos' },
+      { id:'banhoPed', label:'Banho/Higiene' },
+      { id:'posicionamento', label:'Posicionamento/Ninho' },
+      { id:'fototerapia', label:'Fototerapia' },
+      { id:'isolamentoPed', label:'Precaução/Isolamento' }
+    ],
+    conductTitle: 'Condutas de Enfermagem - Neonatal/Pediatria',
+    autoRec(c){ let r=[];
+      if(c.curativosPed==='Iniciado') r.push('Manter cuidados com coto umbilical e curativos conforme protocolo.');
+      if(c.fototerapia==='Iniciado') r.push('Manter fototerapia e monitorar bilirrubina.');
+      if(c.posicionamento==='Iniciado') r.push('Manter posicionamento adequado e ninho terapêutico.');
+      if(c.isolamentoPed==='Iniciado') r.push('Manter precauções de isolamento conforme CCIH.');
+      return r;
+    }
+  },
+  'Nutrição': {
+    conselho: 'CRN', icon: '🍎', color: '#2e7d32',
+    assessFields: [
+      { type:'select', id:'viaAlim', label:'Via de Alimentação', options:['','Oral','SNE','SNG','Gastrostomia','Jejunostomia','NPT','Dieta Zero'] },
+      { type:'text', id:'dietaPrescrita', label:'Dieta Prescrita', placeholder:'Tipo, volume, fracionamento...' },
+      { type:'select', id:'aceitacao', label:'Aceitação da Dieta', options:['','Boa (>75%)','Regular (50-75%)','Ruim (<50%)','Jejum'] },
+      { type:'text', id:'pesoIMC', label:'Peso / IMC', placeholder:'Ex: 70kg, IMC 24.5' },
+      { type:'select', id:'riscNutri', label:'Risco Nutricional', options:['','Sem risco','Risco moderado','Alto risco','Desnutrição'] }
+    ],
+    conducts: [
+      { id:'terapiaNutri', label:'Terapia Nutricional Enteral' },
+      { id:'suplementacao', label:'Suplementação' },
+      { id:'progressaoDieta', label:'Progressão de Dieta' },
+      { id:'avalAntropom', label:'Avaliação Antropométrica' },
+      { id:'orientNutri', label:'Orientação Nutricional' }
+    ],
+    conductTitle: 'Condutas Nutricionais',
+    autoRec(c){ let r=[];
+      if(c.terapiaNutri==='Iniciado') r.push('Manter terapia nutricional enteral conforme prescrição.');
+      if(c.progressaoDieta==='Iniciado') r.push('Avaliar tolerância para progressão da dieta.');
+      if(c.suplementacao==='Iniciado') r.push('Manter suplementação conforme protocolo.');
+      return r;
+    }
+  },
+  'Psicologia': {
+    conselho: 'CRP', icon: '🧠', color: '#7b1fa2',
+    assessFields: [
+      { type:'select', id:'estadoEmoc', label:'Estado Emocional', options:['','Estável','Ansioso','Deprimido','Agitado','Confuso','Colaborativo'] },
+      { type:'select', id:'suporteFam', label:'Suporte Familiar', options:['','Presente e adequado','Presente parcial','Ausente','Conflituoso'] },
+      { type:'text', id:'demandaPsico', label:'Demanda Psicológica Identificada', placeholder:'Descreva a demanda principal...' },
+      { type:'select', id:'riscoPsico', label:'Risco Psicológico', options:['','Baixo','Moderado','Alto','Ideação suicida'] }
+    ],
+    conducts: [
+      { id:'acolhimento', label:'Acolhimento' },
+      { id:'psicoterapia', label:'Psicoterapia Breve' },
+      { id:'suporteFamiliar', label:'Suporte Familiar' },
+      { id:'encaminhPsiq', label:'Encaminhamento Psiquiatria' },
+      { id:'avalCognitiva', label:'Avaliação Cognitiva' }
+    ],
+    conductTitle: 'Condutas Psicológicas',
+    autoRec(c){ let r=[];
+      if(c.acolhimento==='Iniciado') r.push('Manter acompanhamento psicológico e acolhimento.');
+      if(c.suporteFamiliar==='Iniciado') r.push('Continuar suporte à família.');
+      if(c.encaminhPsiq==='Iniciado') r.push('Aguardar avaliação psiquiátrica solicitada.');
+      return r;
+    }
+  },
+  'Serviço Social': {
+    conselho: 'CRESS', icon: '🤝', color: '#e65100',
+    assessFields: [
+      { type:'select', id:'situacaoSocial', label:'Situação Social', options:['','Estável','Vulnerabilidade','Risco social','Abandono'] },
+      { type:'select', id:'vinculoFam', label:'Vínculo Familiar', options:['','Preservado','Fragilizado','Rompido','Sem referência'] },
+      { type:'text', id:'demandasSociais', label:'Demandas Sociais Identificadas', placeholder:'Documentação, benefícios, rede de apoio...' },
+      { type:'select', id:'planAlta', label:'Planejamento de Alta Social', options:['','Não iniciado','Em andamento','Concluído','Pendências'] }
+    ],
+    conducts: [
+      { id:'orientacaoDir', label:'Orientação de Direitos' },
+      { id:'articulacaoRede', label:'Articulação com Rede' },
+      { id:'mediacao', label:'Mediação Familiar' },
+      { id:'encaminhBenef', label:'Encaminhamento Benefícios' },
+      { id:'relatorioSocial', label:'Relatório Social' }
+    ],
+    conductTitle: 'Condutas do Serviço Social',
+    autoRec(c){ let r=[];
+      if(c.articulacaoRede==='Iniciado') r.push('Manter articulação com rede de apoio social.');
+      if(c.encaminhBenef==='Iniciado') r.push('Acompanhar andamento dos benefícios solicitados.');
+      return r;
+    }
+  },
+  'Odontologia': {
+    conselho: 'CRO', icon: '🦷', color: '#00838f',
+    assessFields: [
+      { type:'select', id:'condicaoOral', label:'Condição Oral', options:['','Boa','Regular','Ruim','Crítica'] },
+      { type:'select', id:'higieneBucal', label:'Higiene Bucal', options:['','Adequada','Parcial','Inadequada','Impossibilitada'] },
+      { type:'text', id:'lesoesBucais', label:'Lesões Bucais', placeholder:'Descreva lesões, mucosite, candidíase...' },
+      { type:'select', id:'protocoloCHX', label:'Protocolo Clorexidina', options:['','Em uso','Não indicado','Suspenso'] }
+    ],
+    conducts: [
+      { id:'higienizacao', label:'Higienização Oral' },
+      { id:'tratamentoLesao', label:'Tratamento de Lesão' },
+      { id:'avalOdonto', label:'Avaliação Odontológica' },
+      { id:'laserterapia', label:'Laserterapia' },
+      { id:'adequacaoMeio', label:'Adequação do Meio Bucal' }
+    ],
+    conductTitle: 'Condutas Odontológicas',
+    autoRec(c){ let r=[];
+      if(c.higienizacao==='Iniciado') r.push('Manter protocolo de higiene oral 3x/dia.');
+      if(c.laserterapia==='Iniciado') r.push('Manter laserterapia conforme protocolo.');
+      return r;
+    }
+  },
+  'Lactário': {
+    conselho: 'Registro Interno', icon: '🍼', color: '#f06292',
+    assessFields: [
+      { type:'select', id:'tipoLeite', label:'Tipo de Leite/Fórmula', options:['','Leite Materno','Fórmula Infantil','Fórmula Especial','Misto','Dieta Zero'] },
+      { type:'text', id:'volumePrescrito', label:'Volume Prescrito', placeholder:'Ex: 30ml 8/8h' },
+      { type:'select', id:'viaAdmin', label:'Via de Administração', options:['','Oral/Sucção','Copinho','SNE/SNG','Gastrostomia'] },
+      { type:'select', id:'tolerancia', label:'Tolerância', options:['','Boa','Regular','Ruim','Resíduo gástrico'] }
+    ],
+    conducts: [
+      { id:'prepFormula', label:'Preparo de Fórmula' },
+      { id:'controleTemp', label:'Controle de Temperatura' },
+      { id:'orientAmament', label:'Orientação Amamentação' },
+      { id:'bancoLeite', label:'Banco de Leite' },
+      { id:'progressaoVol', label:'Progressão de Volume' }
+    ],
+    conductTitle: 'Condutas do Lactário',
+    autoRec(c){ let r=[];
+      if(c.progressaoVol==='Iniciado') r.push('Avaliar tolerância para progressão de volume.');
+      if(c.orientAmament==='Iniciado') r.push('Manter orientação e estímulo ao aleitamento materno.');
+      return r;
+    }
+  },
+  'Fonoaudiologia': {
+    conselho: 'CRFa', icon: '🗣️', color: '#5d4037',
+    assessFields: [
+      { type:'select', id:'deglut', label:'Deglutição', options:['','Funcional','Disfagia leve','Disfagia moderada','Disfagia grave','Não avaliada'] },
+      { type:'select', id:'viaAlimFono', label:'Via de Alimentação', options:['','Oral livre','Oral com restrição','Oral + alternativa','Via alternativa exclusiva','Dieta zero'] },
+      { type:'select', id:'comunicacao', label:'Comunicação', options:['','Funcional','Alterada leve','Alterada moderada','Alterada grave','Impossibilitada'] },
+      { type:'text', id:'consistencia', label:'Consistência Liberada', placeholder:'Líquido, pastoso, sólido...' }
+    ],
+    conducts: [
+      { id:'terapiaDeglut', label:'Terapia de Deglutição' },
+      { id:'terapiaLing', label:'Terapia de Linguagem' },
+      { id:'terapiaVoz', label:'Terapia Vocal' },
+      { id:'estimulSensorio', label:'Estimulação Sensório-Motora Oral' },
+      { id:'avalBeira', label:'Avaliação à Beira-Leito' }
+    ],
+    conductTitle: 'Condutas Fonoaudiológicas',
+    autoRec(c){ let r=[];
+      if(c.terapiaDeglut==='Iniciado') r.push('Manter terapia de deglutição e monitorar sinais de broncoaspiração.');
+      if(c.avalBeira==='Iniciado') r.push('Reavaliar deglutição à beira-leito antes de progressão de dieta.');
+      return r;
+    }
+  },
+  'Farmácia Clínica': {
+    conselho: 'CRF', icon: '💊', color: '#4527a0',
+    assessFields: [
+      { type:'text', id:'medicUso', label:'Medicamentos em Uso', placeholder:'Liste os principais medicamentos...' },
+      { type:'select', id:'interacaoMed', label:'Interações Medicamentosas', options:['','Sem interações significativas','Interação leve','Interação moderada','Interação grave'] },
+      { type:'select', id:'reconciliacao', label:'Reconciliação Medicamentosa', options:['','Realizada','Pendente','Em andamento','Não aplicável'] },
+      { type:'text', id:'ajusteDose', label:'Ajustes de Dose Sugeridos', placeholder:'Ajustes renais, hepáticos, peso...' }
+    ],
+    conducts: [
+      { id:'reconcMed', label:'Reconciliação Medicamentosa' },
+      { id:'farmacovig', label:'Farmacovigilância' },
+      { id:'orientAlta', label:'Orientação de Alta Farmacêutica' },
+      { id:'ajusteRenal', label:'Ajuste por Função Renal' },
+      { id:'antimicrobiano', label:'Acompanhamento Antimicrobiano' }
+    ],
+    conductTitle: 'Condutas da Farmácia Clínica',
+    autoRec(c){ let r=[];
+      if(c.reconcMed==='Iniciado') r.push('Concluir reconciliação medicamentosa e comunicar discrepâncias.');
+      if(c.antimicrobiano==='Iniciado') r.push('Monitorar tempo de uso e escalonamento de antimicrobianos.');
+      if(c.farmacovig==='Iniciado') r.push('Acompanhar reações adversas notificadas.');
+      return r;
+    }
+  }
+};
+
+const CONDUCT_OPTIONS = ['Iniciado','Pausado','Finalizado','Não Indicado'];
+
+// ============ STATE ============
+let currentUser = DB.getCurrentUser();
+let currentStep = 0;
+let selectedPatient = null;
+let currentSector = 'Todos';
+let currentTab = 'ativos';
+let dischargeTarget = null;
+let selectedDischargeType = 'casa';
+let readmitTarget = null;
+let enfSubProfile = localStorage.getItem('sbar_enf_subprofile') || 'Adulto';
+
+// Get the active profession key (handles nursing sub-profiles)
+function getActiveProfKey() {
+  if (currentUser && currentUser.profissao === 'Enfermagem') {
+    return enfSubProfile === 'Neonatal/Pediatria' ? 'Enfermagem_NP' : 'Enfermagem';
+  }
+  return currentUser ? currentUser.profissao : '';
+}
+
+function getActiveProfDisplay() {
+  const key = getActiveProfKey();
+  const cfg = PROF_CONFIG[key];
+  return cfg && cfg.displayName ? cfg.displayName : (currentUser ? currentUser.profissao : '');
+}
+
+const SECTORS = {
+  'Emergência': ['PA-Adulto','PA-PED'],
+  'Críticos': ['UTI 1','UTI 2','UCO','UTI Mista'],
+  'Internação': ['1° Andar','3° Andar','4° Andar','5° Andar','6° Andar','7° Andar']
+};
+
+// ============ INIT ============
+window.addEventListener('DOMContentLoaded', async () => {
+  // Unregister old service workers to prevent stale cache
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => { regs.forEach(r => r.unregister()); });
+  }
+  // Load data from server
+  try {
+    await DB.fetchUsers();
+    await DB.fetchPatients();
+    await DB.fetchSBAR();
+  } catch(e) { console.log('Offline mode'); }
+  if (currentUser) {
+    const freshUser = DB.getUsers().find(u => u.id === currentUser.id);
+    if (freshUser) { currentUser = freshUser; DB.setCurrentUser(freshUser); }
+    showDashboard();
+  }
+});
+
+// ============ AUTH ============
+function updateRegConselho() {
+  const prof = document.getElementById('regProfissao').value;
+  const cfg = PROF_CONFIG[prof];
+  const label = cfg ? cfg.conselho : 'Registro Profissional';
+  document.getElementById('regConselhoLabel').textContent = label;
+  document.getElementById('regConselho').placeholder = cfg ? `Nº do ${cfg.conselho}` : 'Nº do conselho';
+}
+
+// Admin is created on server side automatically
+const ADMIN_EMAIL = 'admin@unimedcg.coop.br';
+
+async function handleLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !password) { showToast('Preencha todos os campos'); return; }
+  try {
+    const user = await DB.apiLogin(email, password);
+    currentUser = user;
+    DB.setCurrentUser(user);
+    await DB.fetchPatients();
+    await DB.fetchSBAR();
+    await DB.fetchUsers();
+    showDashboard();
+  } catch(e) {
+    showToast(e.message || 'Erro ao fazer login');
+  }
+}
+
+async function handleRegister() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+  const profissao = document.getElementById('regProfissao').value;
+  const conselho = document.getElementById('regConselho').value.trim();
+  const setor = document.getElementById('regSetor').value;
+  if (!name||!email||!password||!profissao||!conselho||!setor) { showToast('Preencha todos os campos'); return; }
+  if (!email.endsWith('@unimedcg.coop.br')) { showToast('Apenas e-mails @unimedcg.coop.br são permitidos'); return; }
+  if (password.length < 6) { showToast('Senha deve ter no mínimo 6 caracteres'); return; }
+  try {
+    await DB.apiRegister({ name, email, password, profissao, conselho, setor });
+    showToast('Cadastro enviado! Aguarde aprovação do administrador.');
+    showLogin();
+  } catch(e) {
+    showToast(e.message || 'Erro ao cadastrar');
+  }
+}
+
+function handleLogout() {
+  currentUser = null;
+  DB.clearCurrentUser();
+  document.getElementById('dashboardScreen').classList.remove('active');
+  document.getElementById('loginScreen').classList.add('active');
+}
+function showRegister() { document.getElementById('loginForm').style.display='none'; document.getElementById('registerForm').style.display='block'; }
+function showLogin() { document.getElementById('registerForm').style.display='none'; document.getElementById('loginForm').style.display='block'; }
+
+// ============ TABS ============
+async function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  if (tab==='ativos') { document.getElementById('navAtivos').classList.add('active'); document.getElementById('tabAtivos').classList.add('active'); await DB.fetchPatients(); renderPatients(); }
+  else if (tab==='todos') { document.getElementById('navTodos').classList.add('active'); document.getElementById('tabTodos').classList.add('active'); await DB.fetchPatients(); renderAllPatients(); }
+  else if (tab==='admin') { document.getElementById('navAdmin').classList.add('active'); document.getElementById('tabAdmin').classList.add('active'); await DB.fetchUsers(); renderAdminPanel(); }
+}
+
+// ============ DASHBOARD ============
+function showDashboard() {
+  document.getElementById('loginScreen').classList.remove('active');
+  document.getElementById('dashboardScreen').classList.add('active');
+  const profKey = getActiveProfKey();
+  const cfg = PROF_CONFIG[profKey] || {};
+  const isAdmin = currentUser.role === 'admin';
+  const isEnf = currentUser.profissao === 'Enfermagem';
+  let displayText = isAdmin ? `⚙️ ${currentUser.name} • Administrador` : `${cfg.icon||''} ${currentUser.name} • ${getActiveProfDisplay()} • ${currentUser.conselho}`;
+  document.getElementById('userDisplay').innerHTML = displayText + (isEnf ? ` <button onclick="toggleEnfProfile()" style="background:rgba(255,255,255,0.25);border:none;color:#fff;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;margin-left:8px;cursor:pointer;">🔄 ${enfSubProfile==='Adulto'?'Trocar p/ PED':'Trocar p/ Adulto'}</button>` : '');
+  // Show/hide admin tab
+  document.getElementById('navAdmin').style.display = isAdmin ? '' : 'none';
+  renderSectorFilter();
+  renderPatients();
+}
+
+function toggleEnfProfile() {
+  enfSubProfile = enfSubProfile === 'Adulto' ? 'Neonatal/Pediatria' : 'Adulto';
+  localStorage.setItem('sbar_enf_subprofile', enfSubProfile);
+  showDashboard();
+  showToast(`Perfil alterado para: Enfermagem ${enfSubProfile}`);
+}
+
+function renderSectorFilter() {
+  const c = document.getElementById('sectorFilter');
+  let h = `<div class="sector-chip ${currentSector==='Todos'?'active':''}" onclick="filterSector('Todos')">Todos</div>`;
+  for (const [g, ss] of Object.entries(SECTORS)) ss.forEach(s => { h += `<div class="sector-chip ${currentSector===s?'active':''}" onclick="filterSector('${s}')">${s}</div>`; });
+  c.innerHTML = h;
+}
+function filterSector(s) { currentSector=s; renderSectorFilter(); renderPatients(); }
+
+function renderPatients() {
+  const patients = DB.getPatients().filter(p=>!p.discharged);
+  const filtered = currentSector==='Todos' ? patients : patients.filter(p=>p.sector===currentSector);
+  const c = document.getElementById('patientList');
+  if (!filtered.length) { c.innerHTML='<div class="empty-state"><div class="icon">📋</div><p>Nenhum paciente ativo neste setor.<br>Toque em + para adicionar.</p></div>'; return; }
+  c.innerHTML = filtered.map(p=>`
+    <div class="patient-card ${p.critical?'critical':''}">
+      <div class="patient-card-header"><div><div class="patient-name">${p.name}</div><div class="patient-bed">Leito: ${p.bed} • ${p.sector}</div></div>
+      <span class="patient-status ${p.critical?'status-critical':'status-stable'}">${p.critical?'Crítico':'Estável'}</span></div>
+      <div class="patient-card-actions">
+        <button class="card-action-btn action-sbar" onclick="startSbar('${p.id}')">📝 SBAR</button>
+        <button class="card-action-btn action-history" onclick="startHistory('${p.id}')">📖 Histórico</button>
+        <button class="card-action-btn" style="border-color:#9c27b0;color:#9c27b0;" onclick="startMulti('${p.id}')">👥 Multi</button>
+        <button class="card-action-btn action-discharge" onclick="startDischarge('${p.id}')">🏠 Alta</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderAllPatients() {
+  const q = (document.getElementById('searchAllPatients').value||'').toLowerCase().trim();
+  let pts = DB.getPatients();
+  if (q) pts = pts.filter(p=>p.name.toLowerCase().includes(q)||p.bed.toLowerCase().includes(q)||p.sector.toLowerCase().includes(q));
+  pts.sort((a,b)=>{ if(a.discharged&&!b.discharged) return 1; if(!a.discharged&&b.discharged) return -1; return 0; });
+  const c = document.getElementById('allPatientsList');
+  if (!pts.length) { c.innerHTML='<div class="empty-state"><div class="icon">🔍</div><p>Nenhum paciente encontrado.</p></div>'; return; }
+  c.innerHTML = pts.map(p=>{
+    const sc=p.discharged?'discharged':(p.critical?'critical':'');
+    const sl=p.discharged?(p.dischargeType||'Alta'):(p.critical?'Crítico':'Estável');
+    const sb=p.discharged?'status-discharged':(p.critical?'status-critical':'status-stable');
+    const dd=p.dischargeDate?new Date(p.dischargeDate).toLocaleDateString('pt-BR'):'';
+    const dt=p.dischargeType||'Alta';
+    return `<div class="patient-card ${sc}"><div class="patient-card-header"><div><div class="patient-name">${p.name}</div><div class="patient-bed">Leito: ${p.bed} • ${p.sector}</div>${p.discharged?`<div class="discharge-info">${dt} em: ${dd}${p.dischargeNote?' • '+p.dischargeNote:''}</div>`:''}</div><span class="patient-status ${sb}">${sl}</span></div>
+    <div class="patient-card-actions">${!p.discharged?`<button class="card-action-btn action-sbar" onclick="startSbar('${p.id}')">📝 SBAR</button>`:''}<button class="card-action-btn action-history" onclick="startHistory('${p.id}')">📖 Histórico</button><button class="card-action-btn" style="border-color:#9c27b0;color:#9c27b0;" onclick="startMulti('${p.id}')">👥 Multi</button>${p.discharged?`<button class="card-action-btn action-readmit" onclick="readmitPatient('${p.id}')">🔄 Reinterna</button>`:`<button class="card-action-btn action-discharge" onclick="startDischarge('${p.id}')">🏠 Alta</button>`}</div></div>`;
+  }).join('');
+}
+
+// ============ PATIENT MGMT ============
+function showAddPatient(){ document.getElementById('addPatientModal').classList.add('active'); }
+function closeAddPatient(){ document.getElementById('addPatientModal').classList.remove('active'); document.getElementById('patientName').value=''; document.getElementById('patientBed').value=''; document.getElementById('patientSector').value=''; document.getElementById('patientCritical').checked=false; }
+async function addPatient(){
+  const n=document.getElementById('patientName').value.trim(), b=document.getElementById('patientBed').value.trim(), s=document.getElementById('patientSector').value, cr=document.getElementById('patientCritical').checked;
+  if(!n||!b||!s){showToast('Preencha todos os campos');return;}
+  try {
+    await DB.apiAddPatient({name:n,bed:b,sector:s,critical:cr,discharged:false,dischargeDate:null});
+    await DB.fetchPatients();
+    closeAddPatient(); renderPatients(); showToast('Paciente adicionado!');
+  } catch(e) { showToast('Erro ao adicionar paciente'); }
+}
+
+// ============ DISCHARGE ============
+function startDischarge(id){ const pts=DB.getPatients(); dischargeTarget=pts.find(p=>p.id===id); if(!dischargeTarget)return;
+  document.getElementById('dischargePatientInfo').innerHTML=`<strong>${dischargeTarget.name}</strong><br><span style="color:var(--text-light);">Leito: ${dischargeTarget.bed} • ${dischargeTarget.sector}</span>`;
+  selectedDischargeType='casa'; document.querySelectorAll('#dischargeTypeGroup .conduct-btn').forEach(b=>b.classList.remove('selected'));
+  document.querySelector('#dischargeTypeGroup [data-dtype="casa"]').classList.add('selected');
+  document.getElementById('transferSectorGroup').style.display='none'; document.getElementById('transferSector').value=''; document.getElementById('dischargeNote').value='';
+  document.getElementById('dischargeModal').classList.add('active');
+}
+function selectDischargeType(btn){ document.querySelectorAll('#dischargeTypeGroup .conduct-btn').forEach(b=>b.classList.remove('selected')); btn.classList.add('selected'); selectedDischargeType=btn.dataset.dtype; document.getElementById('transferSectorGroup').style.display=selectedDischargeType==='transferencia'?'block':'none'; }
+function closeDischargeModal(){ document.getElementById('dischargeModal').classList.remove('active'); dischargeTarget=null; }
+async function confirmDischarge(){
+  if(!dischargeTarget)return;
+  if(selectedDischargeType==='transferencia'){
+    const ns=document.getElementById('transferSector').value; if(!ns){showToast('Selecione o setor destino');return;}
+    const pts=DB.getPatients(),i=pts.findIndex(p=>p.id===dischargeTarget.id);
+    if(i!==-1){const old=pts[i].sector;pts[i].sector=ns;pts[i].transferHistory=pts[i].transferHistory||[];pts[i].transferHistory.push({from:old,to:ns,date:new Date().toISOString(),by:currentUser.email,note:document.getElementById('dischargeNote').value.trim()});
+      await DB.apiUpdatePatient(dischargeTarget.id, pts[i]); await DB.fetchPatients();}
+    closeDischargeModal();renderPatients();if(currentTab==='todos')renderAllPatients();showToast(`${dischargeTarget.name} transferido para ${ns}`);
+  } else {
+    const pts=DB.getPatients(),i=pts.findIndex(p=>p.id===dischargeTarget.id);
+    if(i!==-1){pts[i].discharged=true;pts[i].dischargeDate=new Date().toISOString();pts[i].dischargedBy=currentUser.email;pts[i].dischargeType=selectedDischargeType==='casa'?'Alta para Casa':'Óbito';pts[i].dischargeNote=document.getElementById('dischargeNote').value.trim();
+      await DB.apiUpdatePatient(dischargeTarget.id, pts[i]); await DB.fetchPatients();}
+    closeDischargeModal();renderPatients();if(currentTab==='todos')renderAllPatients();showToast(`${selectedDischargeType==='casa'?'Alta registrada':'Óbito registrado'} para ${dischargeTarget.name}`);
+  }
+  dischargeTarget=null;
+}
+
+// ============ READMIT ============
+function readmitPatient(id){ const pts=DB.getPatients(); readmitTarget=pts.find(p=>p.id===id); if(!readmitTarget)return;
+  document.getElementById('readmitPatientInfo').innerHTML=`<strong>${readmitTarget.name}</strong><br><span style="color:var(--text-light);">Último setor: ${readmitTarget.sector} • Leito: ${readmitTarget.bed}</span>${readmitTarget.dischargeType?`<br><span style="color:var(--text-light);">Saída: ${readmitTarget.dischargeType}</span>`:''}`;
+  document.getElementById('readmitSector').value='';document.getElementById('readmitBed').value='';document.getElementById('readmitCritical').checked=false;
+  document.getElementById('readmitModal').classList.add('active');
+}
+function closeReadmitModal(){ document.getElementById('readmitModal').classList.remove('active'); readmitTarget=null; }
+async function confirmReadmit(){
+  if(!readmitTarget)return; const s=document.getElementById('readmitSector').value,b=document.getElementById('readmitBed').value.trim();
+  if(!s){showToast('Selecione o setor');return;} if(!b){showToast('Informe o leito');return;}
+  const pts=DB.getPatients(),i=pts.findIndex(p=>p.id===readmitTarget.id);
+  if(i!==-1){pts[i].discharged=false;pts[i].dischargeDate=null;pts[i].dischargeType=null;pts[i].sector=s;pts[i].bed=b;pts[i].critical=document.getElementById('readmitCritical').checked;pts[i].readmitDate=new Date().toISOString();pts[i].readmitBy=currentUser.email;
+    await DB.apiUpdatePatient(readmitTarget.id, pts[i]); await DB.fetchPatients();}
+  closeReadmitModal();renderPatients();renderAllPatients();showToast(`${readmitTarget.name} reinterno em ${s}`);readmitTarget=null;
+}
+
+// ============ SBAR ACTIONS ============
+function startSbar(id){ const pts=DB.getPatients(); selectedPatient=pts.find(p=>p.id===id); if(!selectedPatient)return; openSbarForm(); }
+function startHistory(id){ const pts=DB.getPatients(); selectedPatient=pts.find(p=>p.id===id); if(!selectedPatient)return; openHistory(); }
+
+// ============ DYNAMIC ASSESSMENT FORM ============
+function buildAssessmentForm() {
+  const prof = getActiveProfKey();
+  const cfg = PROF_CONFIG[prof];
+  if (!cfg) return;
+  const container = document.getElementById('assessmentContainer');
+  let html = '';
+  // Assessment fields
+  cfg.assessFields.forEach(f => {
+    if (f.type === 'select') {
+      html += `<div class="form-group"><label>${f.label}</label><select id="${f.id}" class="form-select">${f.options.map(o=>`<option value="${o}">${o||'Selecione...'}</option>`).join('')}</select></div>`;
+    } else if (f.type === 'number') {
+      html += `<div class="form-group"><label>${f.label}</label><input type="number" id="${f.id}" class="form-input" placeholder="${f.placeholder||''}" ${f.min!==undefined?'min="'+f.min+'"':''} ${f.max!==undefined?'max="'+f.max+'"':''}></div>`;
+    } else {
+      html += `<div class="form-group"><label>${f.label}</label><input type="text" id="${f.id}" class="form-input" placeholder="${f.placeholder||''}"></div>`;
+    }
+  });
+  // Conducts
+  html += `<hr class="section-divider"><h3 class="assess-title">${cfg.conductTitle}</h3>`;
+  cfg.conducts.forEach(c => {
+    html += `<div class="conduct-group"><div class="conduct-label">${c.label}</div><div class="conduct-options" data-conduct="${c.id}">`;
+    CONDUCT_OPTIONS.forEach(opt => {
+      html += `<button class="conduct-btn" data-value="${opt}" onclick="selectConduct(this)">${opt}</button>`;
+    });
+    html += '</div></div>';
+  });
+  container.innerHTML = html;
+}
+
+// ============ SBAR FORM ============
+function openSbarForm() {
+  currentStep = 0;
+  document.getElementById('sbarFormScreen').classList.add('active');
+  const profKey = getActiveProfKey();
+  const cfg = PROF_CONFIG[profKey] || {};
+  document.getElementById('sbarFormTitle').textContent = `${cfg.icon||''} SBAR ${cfg.displayName||currentUser.profissao} - ${selectedPatient.name}`;
+  document.getElementById('sbarS').value = '';
+  document.getElementById('sbarB').value = '';
+  document.getElementById('sbarR').value = '';
+  buildAssessmentForm();
+  updateStepper();
+}
+function closeSbarForm() { document.getElementById('sbarFormScreen').classList.remove('active'); }
+
+function updateStepper() {
+  document.querySelectorAll('.step-item').forEach((item,i)=>{ item.classList.remove('active','done'); if(i===currentStep)item.classList.add('active'); if(i<currentStep)item.classList.add('done'); });
+  document.querySelectorAll('.step-panel').forEach((p,i)=>{ p.classList.toggle('active',i===currentStep); });
+  document.getElementById('prevBtn').style.display = currentStep===0?'none':'';
+  document.getElementById('nextBtn').textContent = currentStep===3?'Salvar Passagem':'Próximo';
+  if(currentStep===3){document.getElementById('nextBtn').classList.remove('btn-primary');document.getElementById('nextBtn').classList.add('btn-success');}
+  else{document.getElementById('nextBtn').classList.add('btn-primary');document.getElementById('nextBtn').classList.remove('btn-success');}
+}
+function nextStep(){ if(currentStep<3){currentStep++;if(currentStep===3)generateRecommendation();updateStepper();}else{saveSBAR();} }
+function prevStep(){ if(currentStep>0){currentStep--;updateStepper();} }
+
+function selectConduct(btn){ const g=btn.parentElement; g.querySelectorAll('.conduct-btn').forEach(b=>b.classList.remove('selected')); btn.classList.add('selected'); }
+
+function getConducts(){
+  const conducts={};
+  document.querySelectorAll('#assessmentContainer .conduct-options').forEach(g=>{
+    const n=g.dataset.conduct, s=g.querySelector('.conduct-btn.selected');
+    conducts[n]=s?s.dataset.value:'Não definido';
+  });
+  return conducts;
+}
+
+function getAssessFields(){
+  const cfg=PROF_CONFIG[getActiveProfKey()]; if(!cfg)return {};
+  const data={};
+  cfg.assessFields.forEach(f=>{
+    const el=document.getElementById(f.id);
+    if(el) data[f.id]={label:f.label, value:el.value};
+  });
+  return data;
+}
+
+function generateRecommendation(){
+  const cfg=PROF_CONFIG[getActiveProfKey()]; if(!cfg)return;
+  const conducts=getConducts();
+  const rec=cfg.autoRec(conducts);
+  const cur=document.getElementById('sbarR').value;
+  if(!cur) document.getElementById('sbarR').value=rec.join('\n');
+}
+
+async function saveSBAR(){
+  const s=document.getElementById('sbarS').value.trim();
+  if(!s){showToast('Preencha o campo Situação (S)');currentStep=0;updateStepper();return;}
+  const profKey = getActiveProfKey();
+  const profDisplay = getActiveProfDisplay();
+  const record={
+    patientId:selectedPatient.id,
+    odId:currentUser.id,
+    profEmail:currentUser.email,
+    profName:currentUser.name,
+    profissao:currentUser.profissao,
+    profSubProfile: enfSubProfile,
+    profissaoDisplay: profDisplay,
+    profKey: profKey,
+    conselho:currentUser.conselho,
+    timestamp:new Date().toISOString(),
+    sbar:{
+      s:s,
+      b:document.getElementById('sbarB').value.trim(),
+      a:{ fields:getAssessFields(), conducts:getConducts() },
+      r:document.getElementById('sbarR').value.trim()
+    }
+  };
+  try {
+    await DB.apiAddSBAR(record);
+    await DB.fetchSBAR();
+    closeSbarForm(); showToast('Passagem SBAR salva com sucesso!');
+  } catch(e) { showToast('Erro ao salvar passagem'); }
+}
+
+// ============ HISTORY (filtered by user's profession + sub-profile) ============
+function openHistory(){
+  const allRecords=DB.getSBAR().filter(r=>r.patientId===selectedPatient.id);
+  // Filter by current user's profession (each area sees only their own)
+  let records;
+  if (currentUser.role === 'admin') {
+    records = allRecords;
+  } else if (currentUser.profissao === 'Enfermagem') {
+    // Nursing: filter by sub-profile
+    const activeKey = getActiveProfKey();
+    records = allRecords.filter(r => r.profKey === activeKey || (r.profissao === 'Enfermagem' && !r.profKey && enfSubProfile === 'Adulto'));
+  } else {
+    records = allRecords.filter(r => r.profissao === currentUser.profissao);
+  }
+  document.getElementById('historyScreen').classList.add('active');
+  const profKey = getActiveProfKey();
+  const cfg = PROF_CONFIG[profKey] || {};
+  document.getElementById('historyTitle').textContent=`${cfg.icon||'📖'} Histórico ${getActiveProfDisplay()} - ${selectedPatient.name}`;
+  const c=document.getElementById('historyContent');
+  if(!records.length){c.innerHTML='<div class="empty-state"><div class="icon">📝</div><p>Nenhuma passagem da sua área registrada para este paciente.</p></div>';return;}
+  c.innerHTML=renderSbarRecords(records);
+}
+function closeHistory(){ document.getElementById('historyScreen').classList.remove('active'); }
+
+// ============ MULTIDISCIPLINARY (all professions) ============
+let multiProfFilter = 'Todas';
+
+function startMulti(id){ const pts=DB.getPatients(); selectedPatient=pts.find(p=>p.id===id); if(!selectedPatient)return; multiProfFilter='Todas'; openMulti(); }
+
+function openMulti(){
+  document.getElementById('multiScreen').classList.add('active');
+  document.getElementById('multiTitle').textContent=`👥 Multidisciplinar - ${selectedPatient.name}`;
+  renderMultiProfFilter();
+  renderMultiContent();
+}
+function closeMulti(){ document.getElementById('multiScreen').classList.remove('active'); }
+
+function renderMultiProfFilter(){
+  const records=DB.getSBAR().filter(r=>r.patientId===selectedPatient.id);
+  const profs = [...new Set(records.map(r=>r.profissao).filter(Boolean))];
+  let h = `<div class="sector-chip ${multiProfFilter==='Todas'?'active':''}" onclick="setMultiProf('Todas')">Todas</div>`;
+  profs.forEach(p => {
+    const cfg=PROF_CONFIG[p]||{};
+    h += `<div class="sector-chip ${multiProfFilter===p?'active':''}" onclick="setMultiProf('${p}')">${cfg.icon||'👤'} ${p}</div>`;
+  });
+  document.getElementById('multiProfFilter').innerHTML = h;
+}
+
+function setMultiProf(p){ multiProfFilter=p; renderMultiProfFilter(); renderMultiContent(); }
+
+function renderMultiContent(){
+  let records=DB.getSBAR().filter(r=>r.patientId===selectedPatient.id);
+  if(multiProfFilter!=='Todas') records=records.filter(r=>r.profissao===multiProfFilter);
+  const c=document.getElementById('multiContent');
+  if(!records.length){c.innerHTML='<div class="empty-state"><div class="icon">👥</div><p>Nenhuma passagem multidisciplinar registrada.</p></div>';return;}
+  c.innerHTML=renderSbarRecords(records);
+}
+
+// ============ SHARED SBAR RENDER ============
+function renderSbarRecords(records){
+  return records.map(r=>{
+    const d=new Date(r.timestamp);
+    const ds=d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const prof=r.profissao||'Fisioterapia';
+    const cfg=PROF_CONFIG[prof]||{};
+    let assessHtml='';
+    if(r.sbar.a.fields){
+      assessHtml=Object.values(r.sbar.a.fields).filter(f=>f.value).map(f=>`${f.label}: ${f.value}`).join(' | ');
+    } else if(r.sbar.a.modoVent!==undefined){
+      assessHtml=`${r.sbar.a.modoVent||'—'} | FiO2: ${r.sbar.a.fio2||'—'}% | PEEP: ${r.sbar.a.peep||'—'}`;
+    }
+    const conducts=r.sbar.a.conducts||{};
+    const conductLabels=cfg.conducts?Object.fromEntries(cfg.conducts.map(c=>[c.id,c.label])):{desmame:'Desmame',vni:'VNI',progressao:'Prog. Motora',tmi:'TMI',eletro:'Eletroestim.'};
+    const conductStr=Object.entries(conducts).map(([k,v])=>`${conductLabels[k]||k}: ${v}`).join(' | ');
+    return `<div class="history-item" style="border-left:4px solid ${cfg.color||'#666'}">
+      <div class="history-meta">📅 ${ds} • ${cfg.icon||'👤'} ${r.profName||r.fisioName||''} (${prof}) • ${r.profEmail||r.fisioEmail||''}</div>
+      <div class="history-section"><strong>S - Situação:</strong><p>${r.sbar.s}</p></div>
+      <div class="history-section"><strong>B - Background (Histórico Clínico):</strong><p>${r.sbar.b||'—'}</p></div>
+      <div class="history-section"><strong>A - Avaliação (${prof}):</strong><p>${assessHtml||'—'}</p><p style="font-size:12px;color:var(--text-light);margin-top:4px;">${conductStr}</p></div>
+      <div class="history-section"><strong>R - Recomendação:</strong><p>${r.sbar.r||'—'}</p></div>
+    </div>`;
+  }).join('');
+}
+
+// ============ ADMIN PANEL ============
+let adminFilter = 'todos';
+
+function renderAdminPanel() {
+  renderAdminStats();
+  renderAdminFilter();
+  renderAdminUsers();
+}
+
+function renderAdminStats() {
+  const users = DB.getUsers().filter(u => u.role !== 'admin');
+  const pending = users.filter(u => u.status === 'pending').length;
+  const active = users.filter(u => u.status === 'active').length;
+  const inactive = users.filter(u => u.status === 'inactive').length;
+  document.getElementById('adminStats').innerHTML = `
+    <div class="stat-card"><div class="stat-number" style="color:var(--warning)">${pending}</div><div class="stat-label">Pendentes</div></div>
+    <div class="stat-card"><div class="stat-number" style="color:var(--success)">${active}</div><div class="stat-label">Ativos</div></div>
+    <div class="stat-card"><div class="stat-number" style="color:var(--danger)">${inactive}</div><div class="stat-label">Inativos</div></div>
+  `;
+}
+
+function renderAdminFilter() {
+  const filters = [{id:'todos',label:'Todos'},{id:'pending',label:'Pendentes'},{id:'active',label:'Ativos'},{id:'inactive',label:'Inativos'}];
+  document.getElementById('adminFilter').innerHTML = filters.map(f => `<button class="admin-filter-btn ${adminFilter===f.id?'active':''}" onclick="setAdminFilter('${f.id}')">${f.label}</button>`).join('');
+}
+
+function setAdminFilter(f) { adminFilter = f; renderAdminFilter(); renderAdminUsers(); }
+
+function renderAdminUsers() {
+  const q = (document.getElementById('searchUsers').value||'').toLowerCase().trim();
+  let users = DB.getUsers().filter(u => u.role !== 'admin');
+  if (adminFilter !== 'todos') users = users.filter(u => u.status === adminFilter);
+  if (q) users = users.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.profissao||'').toLowerCase().includes(q));
+  // Sort: pending first
+  users.sort((a,b) => { if(a.status==='pending'&&b.status!=='pending') return -1; if(a.status!=='pending'&&b.status==='pending') return 1; return 0; });
+  const c = document.getElementById('adminUserList');
+  if (!users.length) { c.innerHTML = '<div class="empty-state"><div class="icon">👥</div><p>Nenhum usuário encontrado.</p></div>'; return; }
+  c.innerHTML = users.map(u => {
+    const cfg = PROF_CONFIG[u.profissao] || {};
+    const statusClass = u.status === 'pending' ? 'pending' : (u.status === 'active' ? 'active' : 'inactive');
+    const badgeClass = u.status === 'pending' ? 'badge-pending' : (u.status === 'active' ? 'badge-active' : 'badge-inactive');
+    const badgeLabel = u.status === 'pending' ? 'Pendente' : (u.status === 'active' ? 'Ativo' : 'Inativo');
+    const regDate = u.id ? new Date(parseInt(u.id)).toLocaleDateString('pt-BR') : '';
+    let actions = '';
+    if (u.status === 'pending') {
+      actions = `<button class="admin-btn approve" onclick="approveUser('${u.id}')">✓ Aprovar</button><button class="admin-btn deactivate" onclick="rejectUser('${u.id}')">✗ Rejeitar</button>`;
+    } else if (u.status === 'active') {
+      actions = `<button class="admin-btn reactivate" onclick="openChangePass('${u.id}')">🔒 Senha</button><button class="admin-btn deactivate" onclick="deactivateUser('${u.id}')">🚫 Desativar</button>`;
+    } else {
+      actions = `<button class="admin-btn reactivate" onclick="reactivateUser('${u.id}')">✓ Reativar</button><button class="admin-btn deactivate" onclick="deleteUser('${u.id}')">🗑️ Excluir</button>`;
+    }
+    return `<div class="admin-card ${statusClass}">
+      <div class="admin-card-header"><div class="admin-card-info"><div class="admin-card-name">${cfg.icon||'👤'} ${u.name}</div><div class="admin-card-detail">${u.email}</div><div class="admin-card-detail">${u.profissao} • ${u.conselho} • ${u.setor}</div><div class="admin-card-detail">Cadastro: ${regDate}</div></div><span class="admin-badge ${badgeClass}">${badgeLabel}</span></div>
+      <div class="admin-actions">${actions}</div>
+    </div>`;
+  }).join('');
+}
+
+async function approveUser(id) {
+  await DB.apiUpdateUser(id, { status: 'active', approvedBy: currentUser.email, approvedDate: new Date().toISOString() });
+  await DB.fetchUsers();
+  renderAdminPanel();
+  showToast('Usuário aprovado com sucesso!');
+}
+
+async function rejectUser(id) {
+  if (!confirm('Rejeitar este cadastro?')) return;
+  await DB.apiUpdateUser(id, { status: 'inactive', rejectedBy: currentUser.email });
+  await DB.fetchUsers();
+  renderAdminPanel();
+  showToast('Cadastro rejeitado.');
+}
+
+async function deactivateUser(id) {
+  if (!confirm('Desativar o acesso deste usuário?')) return;
+  await DB.apiUpdateUser(id, { status: 'inactive', deactivatedBy: currentUser.email, deactivatedDate: new Date().toISOString() });
+  await DB.fetchUsers();
+  renderAdminPanel();
+  showToast('Acesso desativado.');
+}
+
+async function reactivateUser(id) {
+  await DB.apiUpdateUser(id, { status: 'active', reactivatedBy: currentUser.email, reactivatedDate: new Date().toISOString() });
+  await DB.fetchUsers();
+  renderAdminPanel();
+  showToast('Acesso reativado!');
+}
+
+async function deleteUser(id) {
+  if (!confirm('Excluir permanentemente este usuário?')) return;
+  await DB.apiDeleteUser(id);
+  await DB.fetchUsers();
+  renderAdminPanel();
+  showToast('Usuário excluído.');
+}
+
+// ============ PASSWORD TOGGLE ============
+function togglePassword(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (input.type === 'password') { input.type = 'text'; btn.textContent = '👁️'; }
+  else { input.type = 'password'; btn.textContent = '🙈'; }
+}
+
+// ============ CHANGE PASSWORD (ADMIN) ============
+let changePassTarget = null;
+
+function openChangePass(id) {
+  const users = DB.getUsers();
+  changePassTarget = users.find(u => u.id === id);
+  if (!changePassTarget) return;
+  document.getElementById('changePassUserInfo').innerHTML = `<strong>${changePassTarget.name}</strong><br><span style="color:var(--text-light);">${changePassTarget.email} • ${changePassTarget.profissao}</span>`;
+  document.getElementById('newPassword').value = '';
+  document.getElementById('confirmPassword').value = '';
+  document.getElementById('changePassModal').classList.add('active');
+}
+
+function closeChangePassModal() {
+  document.getElementById('changePassModal').classList.remove('active');
+  changePassTarget = null;
+}
+
+async function confirmChangePass() {
+  if (!changePassTarget) return;
+  const newPass = document.getElementById('newPassword').value;
+  const confirmPass = document.getElementById('confirmPassword').value;
+  if (!newPass || !confirmPass) { showToast('Preencha ambos os campos'); return; }
+  if (newPass.length < 6) { showToast('Senha deve ter no mínimo 6 caracteres'); return; }
+  if (newPass !== confirmPass) { showToast('As senhas não coincidem'); return; }
+  await DB.apiUpdateUser(changePassTarget.id, { password: newPass });
+  await DB.fetchUsers();
+  closeChangePassModal();
+  showToast(`Senha de ${changePassTarget.name} alterada com sucesso!`);
+  changePassTarget = null;
+}
+
+function showToast(msg){ const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000); }
+</script>
+</body>
+</html>

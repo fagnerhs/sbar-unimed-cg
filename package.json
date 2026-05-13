@@ -1,0 +1,14 @@
+{
+  "name": "sbar-unimed-cg",
+  "version": "1.0.0",
+  "description": "App PWA SBAR Unimed CG - Passagem de plantão multiprofissional",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["sbar", "pwa", "healthcare", "unimed"],
+  "license": "MIT"
+}

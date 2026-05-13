@@ -1,0 +1,22 @@
+{
+  "name": "SBAR Unimed CG - Passagem de Plantão",
+  "short_name": "SBAR Unimed",
+  "description": "App de passagem de plantão fisioterapêutico baseado no protocolo SBAR",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a237e",
+  "theme_color": "#1a237e",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
