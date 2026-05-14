@@ -198,6 +198,7 @@
     <h1>SBAR Unimed CG</h1>
     <div class="header-sub" id="userDisplay"></div>
     <div class="header-actions">
+      <button class="header-btn" onclick="openSelfChangePass()" title="Alterar Senha">🔑</button>
       <button class="header-btn" onclick="handleLogout()" title="Sair">⏻</button>
     </div>
   </div>
@@ -224,10 +225,10 @@
   </div>
   <div class="bottom-nav">
     <button class="nav-item active" id="navAtivos" onclick="switchTab('ativos')"><span class="nav-icon">🏥</span>Ativos</button>
-    <button class="nav-item" id="navTodos" onclick="switchTab('todos')"><span class="nav-icon">📋</span>Todos</button>
-    <button class="nav-item" id="navAdmin" onclick="switchTab('admin')" style="display:none;"><span class="nav-icon">⚙️</span>Admin</button>
     <button class="nav-item" id="navAdd" onclick="showAddPatient()"><span class="nav-icon">➕</span>Novo</button>
     <button class="nav-item" id="navPdf" onclick="generateSectorPDF()"><span class="nav-icon">📄</span>PDF</button>
+    <button class="nav-item" id="navAdmin" onclick="switchTab('admin')" style="display:none;"><span class="nav-icon">⚙️</span>Admin</button>
+    <button class="nav-item" id="navTodos" onclick="switchTab('todos')"><span class="nav-icon">📋</span>Todos</button>
   </div>
   <button class="fab" onclick="showAddPatient()" title="Adicionar Paciente">+</button>
 </div>
@@ -346,7 +347,7 @@
   </div>
 </div>
 
-<!-- CHANGE PASSWORD MODAL -->
+<!-- CHANGE PASSWORD MODAL (Admin changes other user's password) -->
 <div class="modal-overlay" id="changePassModal">
   <div class="modal-card">
     <h3>🔒 Alterar Senha</h3>
@@ -368,6 +369,38 @@
     <div style="display:flex;gap:12px;">
       <button class="btn btn-outline" onclick="closeChangePassModal()" style="flex:1;">Cancelar</button>
       <button class="btn btn-primary" onclick="confirmChangePass()" style="flex:1;">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- SELF CHANGE PASSWORD MODAL (User changes own password) -->
+<div class="modal-overlay" id="selfChangePassModal">
+  <div class="modal-card">
+    <h3>🔑 Alterar Minha Senha</h3>
+    <div class="form-group">
+      <label>Senha Atual</label>
+      <div class="password-wrapper">
+        <input type="password" id="selfCurrentPass" class="form-input" placeholder="Sua senha atual">
+        <button type="button" class="toggle-pass" onclick="togglePassword('selfCurrentPass', this)">🙈</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Nova Senha</label>
+      <div class="password-wrapper">
+        <input type="password" id="selfNewPass" class="form-input" placeholder="Mínimo 6 caracteres">
+        <button type="button" class="toggle-pass" onclick="togglePassword('selfNewPass', this)">🙈</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Confirmar Nova Senha</label>
+      <div class="password-wrapper">
+        <input type="password" id="selfConfirmPass" class="form-input" placeholder="Repita a nova senha">
+        <button type="button" class="toggle-pass" onclick="togglePassword('selfConfirmPass', this)">🙈</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;">
+      <button class="btn btn-outline" onclick="closeSelfChangePass()" style="flex:1;">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmSelfChangePass()" style="flex:1;">Salvar</button>
     </div>
   </div>
 </div>
@@ -824,8 +857,13 @@ function showDashboard() {
   const isEnf = currentUser.profissao === 'Enfermagem';
   let displayText = isAdmin ? `⚙️ ${currentUser.name} • Administrador` : `${cfg.icon||''} ${currentUser.name} • ${getActiveProfDisplay()} • ${currentUser.conselho}`;
   document.getElementById('userDisplay').innerHTML = displayText + (isEnf ? ` <button onclick="toggleEnfProfile()" style="background:rgba(255,255,255,0.25);border:none;color:#fff;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;margin-left:8px;cursor:pointer;">🔄 ${enfSubProfile==='Adulto'?'Trocar p/ PED':'Trocar p/ Adulto'}</button>` : '');
-  // Show/hide admin tab
-  document.getElementById('navAdmin').style.display = isAdmin ? '' : 'none';
+  // Show/hide admin tab (visible for admin and delegated admins)
+  const showAdminTab = isAdmin || currentUser.role === 'delegated_admin';
+  document.getElementById('navAdmin').style.display = showAdminTab ? '' : 'none';
+  // If delegated admin is in admin mode, show admin indicator
+  if (currentUser.role === 'delegated_admin') {
+    displayText += ` <button onclick="toggleAdminMode()" style="background:rgba(255,255,255,0.25);border:none;color:#fff;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;margin-left:8px;cursor:pointer;">🔄 ${currentUser._adminMode?'Modo Admin':'Modo Profissional'}</button>`;
+  }
   renderSectorFilter();
   renderPatients();
 }
@@ -840,7 +878,15 @@ function toggleEnfProfile() {
 function renderSectorFilter() {
   const c = document.getElementById('sectorFilter');
   let h = `<div class="sector-chip ${currentSector==='Todos'?'active':''}" onclick="filterSector('Todos')">Todos</div>`;
-  for (const [g, ss] of Object.entries(SECTORS)) ss.forEach(s => { h += `<div class="sector-chip ${currentSector===s?'active':''}" onclick="filterSector('${s}')">${s}</div>`; });
+  // Build sector list with user's sector first
+  const userSetor = currentUser ? currentUser.setor : '';
+  let allSectors = [];
+  for (const [g, ss] of Object.entries(SECTORS)) ss.forEach(s => allSectors.push(s));
+  // Move user's sector to front
+  if (userSetor && allSectors.includes(userSetor)) {
+    allSectors = [userSetor, ...allSectors.filter(s => s !== userSetor)];
+  }
+  allSectors.forEach(s => { h += `<div class="sector-chip ${currentSector===s?'active':''}" onclick="filterSector('${s}')">${s}</div>`; });
   c.innerHTML = h;
 }
 function filterSector(s) { currentSector=s; renderSectorFilter(); renderPatients(); }
@@ -1224,7 +1270,8 @@ function setAdminFilter(f) { adminFilter = f; renderAdminFilter(); renderAdminUs
 
 function renderAdminUsers() {
   const q = (document.getElementById('searchUsers').value||'').toLowerCase().trim();
-  let users = DB.getUsers().filter(u => u.role !== 'admin');
+  const isPrimaryAdmin = currentUser.id === 'admin_001';
+  let users = DB.getUsers().filter(u => u.id !== 'admin_001');
   if (adminFilter !== 'todos') users = users.filter(u => u.status === adminFilter);
   if (q) users = users.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.profissao||'').toLowerCase().includes(q));
   // Sort: pending first
@@ -1235,15 +1282,28 @@ function renderAdminUsers() {
     const cfg = PROF_CONFIG[u.profissao] || {};
     const statusClass = u.status === 'pending' ? 'pending' : (u.status === 'active' ? 'active' : 'inactive');
     const badgeClass = u.status === 'pending' ? 'badge-pending' : (u.status === 'active' ? 'badge-active' : 'badge-inactive');
-    const badgeLabel = u.status === 'pending' ? 'Pendente' : (u.status === 'active' ? 'Ativo' : 'Inativo');
+    let badgeLabel = u.status === 'pending' ? 'Pendente' : (u.status === 'active' ? 'Ativo' : 'Inativo');
+    if (u.role === 'delegated_admin') badgeLabel += ' • Admin';
     const regDate = u.id ? new Date(parseInt(u.id)).toLocaleDateString('pt-BR') : '';
     let actions = '';
     if (u.status === 'pending') {
       actions = `<button class="admin-btn approve" onclick="approveUser('${u.id}')">✓ Aprovar</button><button class="admin-btn deactivate" onclick="rejectUser('${u.id}')">✗ Rejeitar</button>`;
     } else if (u.status === 'active') {
       actions = `<button class="admin-btn reactivate" onclick="openChangePass('${u.id}')">🔒 Senha</button><button class="admin-btn deactivate" onclick="deactivateUser('${u.id}')">🚫 Desativar</button>`;
+      // Only primary admin can promote/demote and delete
+      if (isPrimaryAdmin) {
+        if (u.role === 'delegated_admin') {
+          actions += `<button class="admin-btn deactivate" onclick="demoteAdmin('${u.id}')">⬇️ Remover Admin</button>`;
+        } else {
+          actions += `<button class="admin-btn approve" onclick="promoteAdmin('${u.id}')">⬆️ Tornar Admin</button>`;
+        }
+      }
     } else {
-      actions = `<button class="admin-btn reactivate" onclick="reactivateUser('${u.id}')">✓ Reativar</button><button class="admin-btn deactivate" onclick="deleteUser('${u.id}')">🗑️ Excluir</button>`;
+      actions = `<button class="admin-btn reactivate" onclick="reactivateUser('${u.id}')">✓ Reativar</button>`;
+      // Only primary admin can delete users
+      if (isPrimaryAdmin) {
+        actions += `<button class="admin-btn deactivate" onclick="deleteUser('${u.id}')">🗑️ Excluir</button>`;
+      }
     }
     return `<div class="admin-card ${statusClass}">
       <div class="admin-card-header"><div class="admin-card-info"><div class="admin-card-name">${cfg.icon||'👤'} ${u.name}</div><div class="admin-card-detail">${u.email}</div><div class="admin-card-detail">${u.profissao} • ${u.conselho} • ${u.setor}</div><div class="admin-card-detail">Cadastro: ${regDate}</div></div><span class="admin-badge ${badgeClass}">${badgeLabel}</span></div>
@@ -1283,6 +1343,8 @@ async function reactivateUser(id) {
 }
 
 async function deleteUser(id) {
+  // Only primary admin can delete
+  if (currentUser.id !== 'admin_001') { showToast('Apenas o administrador principal pode excluir usuários.'); return; }
   if (!confirm('Excluir permanentemente este usuário?')) return;
   await DB.apiDeleteUser(id);
   await DB.fetchUsers();
@@ -1290,11 +1352,65 @@ async function deleteUser(id) {
   showToast('Usuário excluído.');
 }
 
+// ============ PROMOTE / DEMOTE ADMIN ============
+async function promoteAdmin(id) {
+  if (currentUser.id !== 'admin_001') { showToast('Apenas o administrador principal pode promover.'); return; }
+  if (!confirm('Dar permissão de administrador para este usuário?')) return;
+  await DB.apiUpdateUser(id, { role: 'delegated_admin' });
+  await DB.fetchUsers();
+  renderAdminPanel();
+  showToast('Usuário promovido a administrador!');
+}
+
+async function demoteAdmin(id) {
+  if (currentUser.id !== 'admin_001') { showToast('Apenas o administrador principal pode remover permissão.'); return; }
+  if (!confirm('Remover permissão de administrador deste usuário?')) return;
+  await DB.apiUpdateUser(id, { role: 'user' });
+  await DB.fetchUsers();
+  renderAdminPanel();
+  showToast('Permissão de administrador removida.');
+}
+
+// ============ ADMIN MODE TOGGLE (for delegated admins) ============
+function toggleAdminMode() {
+  if (currentUser.role !== 'delegated_admin') return;
+  currentUser._adminMode = !currentUser._adminMode;
+  DB.setCurrentUser(currentUser);
+  showDashboard();
+  showToast(currentUser._adminMode ? 'Modo Administrador ativado' : 'Modo Profissional ativado');
+}
+
 // ============ PASSWORD TOGGLE ============
 function togglePassword(inputId, btn) {
   const input = document.getElementById(inputId);
   if (input.type === 'password') { input.type = 'text'; btn.textContent = '👁️'; }
   else { input.type = 'password'; btn.textContent = '🙈'; }
+}
+
+// ============ SELF CHANGE PASSWORD ============
+function openSelfChangePass() {
+  document.getElementById('selfCurrentPass').value = '';
+  document.getElementById('selfNewPass').value = '';
+  document.getElementById('selfConfirmPass').value = '';
+  document.getElementById('selfChangePassModal').classList.add('active');
+}
+function closeSelfChangePass() {
+  document.getElementById('selfChangePassModal').classList.remove('active');
+}
+async function confirmSelfChangePass() {
+  const current = document.getElementById('selfCurrentPass').value;
+  const newPass = document.getElementById('selfNewPass').value;
+  const confirm = document.getElementById('selfConfirmPass').value;
+  if (!current || !newPass || !confirm) { showToast('Preencha todos os campos'); return; }
+  if (current !== currentUser.password) { showToast('Senha atual incorreta'); return; }
+  if (newPass.length < 6) { showToast('Nova senha deve ter no mínimo 6 caracteres'); return; }
+  if (newPass !== confirm) { showToast('As senhas não coincidem'); return; }
+  await DB.apiUpdateUser(currentUser.id, { password: newPass });
+  currentUser.password = newPass;
+  DB.setCurrentUser(currentUser);
+  await DB.fetchUsers();
+  closeSelfChangePass();
+  showToast('Sua senha foi alterada com sucesso!');
 }
 
 // ============ CHANGE PASSWORD (ADMIN) ============
