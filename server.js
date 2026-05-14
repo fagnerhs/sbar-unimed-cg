@@ -2,22 +2,30 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
-const DATA_DIR = path.join(__dirname, 'data');
+
+// Use /opt/render/project/data on Render (persistent disk), fallback to local data dir
+const RENDER_DISK = '/opt/render/project/data';
+const DATA_DIR = fs.existsSync(RENDER_DISK) ? RENDER_DISK : path.join(__dirname, 'data');
 
 // Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 // Data files
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const PATIENTS_FILE = path.join(DATA_DIR, 'patients.json');
 const SBAR_FILE = path.join(DATA_DIR, 'sbar.json');
 
-// Initialize data files if they don't exist
+console.log(`Data directory: ${DATA_DIR}`);
+
+// Initialize data files ONLY if they don't exist (preserves existing data)
 function initDataFile(file, defaultData) {
   if (!fs.existsSync(file)) {
     fs.writeFileSync(file, JSON.stringify(defaultData, null, 2));
+    console.log(`Created new data file: ${file}`);
+  } else {
+    console.log(`Existing data file found: ${file}`);
   }
 }
 
@@ -38,20 +46,25 @@ initDataFile(USERS_FILE, [adminUser]);
 initDataFile(PATIENTS_FILE, []);
 initDataFile(SBAR_FILE, []);
 
-// Ensure admin exists
+// Ensure admin exists in existing data
 let usersInit = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
 if (!usersInit.find(u => u.email === 'admin@unimedcg.coop.br')) {
   usersInit.push(adminUser);
   fs.writeFileSync(USERS_FILE, JSON.stringify(usersInit, null, 2));
+  console.log('Admin user added to existing data');
 }
 
 function readJSON(file) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
-  catch(e) { return []; }
+  catch(e) { console.error(`Error reading ${file}:`, e.message); return []; }
 }
 
 function writeJSON(file, data) {
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
+  try {
+    fs.writeFileSync(file, JSON.stringify(data, null, 2));
+  } catch(e) {
+    console.error(`Error writing ${file}:`, e.message);
+  }
 }
 
 function parseBody(req) {
@@ -208,7 +221,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Static file serving
+  // Static file serving with no-cache headers for HTML
   let filePath = path.join(PUBLIC_DIR, req.url === '/' ? 'index.html' : req.url);
   const ext = path.extname(filePath);
 
@@ -219,7 +232,14 @@ const server = http.createServer(async (req, res) => {
   const contentType = MIME_TYPES[ext] || 'text/html';
   try {
     const content = fs.readFileSync(filePath);
-    res.writeHead(200, { 'Content-Type': contentType });
+    const headers = { 'Content-Type': contentType };
+    // Prevent caching of HTML to always serve latest version
+    if (ext === '.html' || ext === '') {
+      headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+      headers['Pragma'] = 'no-cache';
+      headers['Expires'] = '0';
+    }
+    res.writeHead(200, headers);
     res.end(content);
   } catch(e) {
     res.writeHead(500);
@@ -229,4 +249,5 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`SBAR Unimed CG Server running on http://0.0.0.0:${PORT}`);
+  console.log(`Data stored in: ${DATA_DIR}`);
 });

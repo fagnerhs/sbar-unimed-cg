@@ -227,6 +227,7 @@
     <button class="nav-item" id="navTodos" onclick="switchTab('todos')"><span class="nav-icon">📋</span>Todos</button>
     <button class="nav-item" id="navAdmin" onclick="switchTab('admin')" style="display:none;"><span class="nav-icon">⚙️</span>Admin</button>
     <button class="nav-item" id="navAdd" onclick="showAddPatient()"><span class="nav-icon">➕</span>Novo</button>
+    <button class="nav-item" id="navPdf" onclick="generateSectorPDF()"><span class="nav-icon">📄</span>PDF</button>
   </div>
   <button class="fab" onclick="showAddPatient()" title="Adicionar Paciente">+</button>
 </div>
@@ -437,7 +438,8 @@ const PROF_CONFIG = {
   'Fisioterapia': {
     conselho: 'CREFITO', icon: '🫁', color: '#1565c0',
     assessFields: [
-      { type:'select', id:'modoVent', label:'Modo Ventilatório', options:['','Ar Ambiente','Cateter Nasal','Máscara de Venturi','CNAF','VNI - CPAP','VNI - BiPAP','VMI - VCV','VMI - PCV','VMI - PSV','VMI - SIMV','Tubo T'] },
+      { type:'select', id:'modoVent', label:'Modo Ventilatório', options:['','Ar Ambiente','Cateter Nasal','CNAF','Máscara de Venturi','Máscara de Reservatório','Macro Nebulização','VNI','VMI'] },
+      { type:'select', id:'numSessoes', label:'Número de Sessões de Fisioterapia', options:['','1 sessão','2 sessões','3 sessões'] },
       { type:'number', id:'fio2', label:'FiO2 (%)', placeholder:'21-100', min:21, max:100 },
       { type:'number', id:'peep', label:'PEEP (cmH2O)', placeholder:'0-30', min:0, max:30 },
       { type:'number', id:'pressaoSup', label:'Pressão de Suporte / P Insp (cmH2O)', placeholder:'0-40', min:0, max:40 },
@@ -472,7 +474,7 @@ const PROF_CONFIG = {
       { type:'select', id:'nivelConsc', label:'Nível de Consciência', options:['','Alerta','Sonolento','Torporoso','Comatoso'] },
       { type:'select', id:'padResp', label:'Padrão Respiratório', options:['','Eupneico','Taquipneico','Bradipneico','Dispneico'] },
       { type:'text', id:'sinaisVitais', label:'Sinais Vitais (PA, FC, FR, T, SpO2)', placeholder:'Ex: PA 120x80, FC 78, FR 18, T 36.5, SpO2 97%' },
-      { type:'select', id:'modoVentEnf', label:'Suporte Ventilatório', options:['','Ar Ambiente','Cateter Nasal','Máscara de Venturi','CNAF','VNI - CPAP','VNI - BiPAP','VMI - VCV','VMI - PCV','VMI - PSV','VMI - SIMV','Tubo T'] },
+      { type:'select', id:'modoVentEnf', label:'Suporte Ventilatório', options:['','Ar Ambiente','Cateter Nasal','CNAF','Máscara de Venturi','Máscara de Reservatório','Macro Nebulização','VNI','VMI'] },
       { type:'number', id:'fio2Enf', label:'FiO2 (%)', placeholder:'21-100', min:21, max:100 },
       { type:'number', id:'peepEnf', label:'PEEP (cmH2O)', placeholder:'0-30', min:0, max:30 },
       { type:'select', id:'viaAereaEnf', label:'Via Aérea Artificial', options:['','Sem via aérea artificial','TOT (Tubo Orotraqueal)','TQT (Traqueostomia)','Máscara Laríngea'] },
@@ -504,7 +506,7 @@ const PROF_CONFIG = {
       { type:'select', id:'nivelConscPed', label:'Nível de Consciência', options:['','Ativo/Reativo','Hipoativo','Letárgico','Não responsivo'] },
       { type:'select', id:'padRespPed', label:'Padrão Respiratório', options:['','Eupneico','Taquipneico','Bradipneico','Dispneico','Apneia'] },
       { type:'text', id:'sinaisVitaisPed', label:'Sinais Vitais (FC, FR, T, SpO2, PAM)', placeholder:'Ex: FC 140, FR 42, T 36.8, SpO2 96%, PAM 45' },
-      { type:'select', id:'modoVentPed', label:'Suporte Ventilatório', options:['','Ar Ambiente','Cateter Nasal','Hood/Capacete','CPAP Nasal','VNI','VMI - VCV','VMI - PCV','VMI - PSV','VMI - SIMV','VAFO (Alta Frequência)'] },
+      { type:'select', id:'modoVentPed', label:'Suporte Ventilatório', options:['','Ar Ambiente','Cateter Nasal','CNAF','Máscara de Venturi','Máscara de Reservatório','Macro Nebulização','Hood/Capacete','CPAP Nasal','VNI','VMI','VAFO (Alta Frequência)'] },
       { type:'number', id:'fio2Ped', label:'FiO2 (%)', placeholder:'21-100', min:21, max:100 },
       { type:'number', id:'peepPed', label:'PEEP/CPAP (cmH2O)', placeholder:'0-15', min:0, max:30 },
       { type:'select', id:'viaAereaPed', label:'Via Aérea Artificial', options:['','Sem via aérea artificial','TOT (Tubo Orotraqueal)','TQT (Traqueostomia)','Cânula Nasal'] },
@@ -880,7 +882,7 @@ function renderAllPatients() {
 }
 
 // ============ PATIENT MGMT ============
-function showAddPatient(){ document.getElementById('addPatientModal').classList.add('active'); }
+function showAddPatient(){ document.getElementById('addPatientModal').classList.add('active'); if(currentSector && currentSector!=='Todos'){document.getElementById('patientSector').value=currentSector;} }
 function closeAddPatient(){ document.getElementById('addPatientModal').classList.remove('active'); document.getElementById('patientName').value=''; document.getElementById('patientBed').value=''; document.getElementById('patientSector').value=''; document.getElementById('patientCritical').checked=false; }
 async function addPatient(){
   const n=document.getElementById('patientName').value.trim(), b=document.getElementById('patientBed').value.trim(), s=document.getElementById('patientSector').value, cr=document.getElementById('patientCritical').checked;
@@ -1325,6 +1327,97 @@ async function confirmChangePass() {
   closeChangePassModal();
   showToast(`Senha de ${changePassTarget.name} alterada com sucesso!`);
   changePassTarget = null;
+}
+
+// ============ PDF REPORT ============
+function generateSectorPDF() {
+  const sector = currentSector;
+  if (sector === 'Todos') { showToast('Selecione um setor específico para gerar o PDF'); return; }
+  const profKey = getActiveProfKey();
+  const profDisplay = getActiveProfDisplay();
+  const patients = DB.getPatients().filter(p => !p.discharged && p.sector === sector);
+  if (!patients.length) { showToast('Nenhum paciente ativo neste setor'); return; }
+  const allSbar = DB.getSBAR();
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+
+  let rows = '';
+  patients.forEach(p => {
+    // Get last SBAR for this patient from the current profession
+    let records;
+    if (currentUser.role === 'admin') {
+      records = allSbar.filter(r => r.patientId === p.id);
+    } else if (currentUser.profissao === 'Enfermagem') {
+      const activeKey = getActiveProfKey();
+      records = allSbar.filter(r => r.patientId === p.id && (r.profKey === activeKey || (r.profissao === 'Enfermagem' && !r.profKey && enfSubProfile === 'Adulto')));
+    } else {
+      records = allSbar.filter(r => r.patientId === p.id && r.profissao === currentUser.profissao);
+    }
+    const last = records.length > 0 ? records[0] : null;
+    const status = p.critical ? 'CRÍTICO' : 'Estável';
+    const statusColor = p.critical ? '#c62828' : '#2e7d32';
+
+    let sText = '-', bText = '-', aText = '-', rText = '-', sbarDate = '-', sbarProf = '-';
+    if (last) {
+      sText = last.sbar.s || '-';
+      bText = last.sbar.b || '-';
+      rText = last.sbar.r || '-';
+      sbarDate = new Date(last.timestamp).toLocaleDateString('pt-BR') + ' ' + new Date(last.timestamp).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+      sbarProf = (last.profName || '') + ' (' + (last.profEmail || '') + ')';
+      // Build assessment text
+      if (last.sbar.a && last.sbar.a.fields) {
+        const parts = [];
+        Object.values(last.sbar.a.fields).forEach(f => {
+          if (f.isMultiDevice && Array.isArray(f.value) && f.value.length > 0) {
+            const devs = f.value.map(d => d.tipo + (d.data ? ' (' + d.data + ')' : '') + (d.local ? ' - ' + d.local : '') + (d.obs ? ' [' + d.obs + ']' : '')).join('; ');
+            parts.push(f.label + ': ' + devs);
+          } else if (f.value && !f.isMultiDevice) {
+            parts.push(f.label + ': ' + f.value);
+          }
+        });
+        aText = parts.join(' | ') || '-';
+      }
+      // Add conducts
+      if (last.sbar.a && last.sbar.a.conducts) {
+        const cParts = Object.entries(last.sbar.a.conducts).map(([k,v]) => k + ': ' + v).join(' | ');
+        if (cParts) aText += '<br><small>Condutas: ' + cParts + '</small>';
+      }
+    }
+
+    rows += `<tr>
+      <td style="padding:8px;border:1px solid #ddd;vertical-align:top;">
+        <strong>${p.name}</strong><br>
+        <small>Leito: ${p.bed}</small><br>
+        <span style="color:${statusColor};font-weight:bold;font-size:11px;">${status}</span>
+      </td>
+      <td style="padding:8px;border:1px solid #ddd;vertical-align:top;font-size:12px;">${sText}</td>
+      <td style="padding:8px;border:1px solid #ddd;vertical-align:top;font-size:12px;">${bText}</td>
+      <td style="padding:8px;border:1px solid #ddd;vertical-align:top;font-size:12px;">${aText}</td>
+      <td style="padding:8px;border:1px solid #ddd;vertical-align:top;font-size:12px;">${rText}</td>
+      <td style="padding:8px;border:1px solid #ddd;vertical-align:top;font-size:11px;color:#666;">${sbarDate}<br>${sbarProf}</td>
+    </tr>`;
+  });
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório SBAR - ${sector}</title>
+    <style>@media print{body{margin:0;padding:10px}table{page-break-inside:auto}tr{page-break-inside:avoid}}
+    body{font-family:Arial,sans-serif;padding:20px;color:#333}
+    h1{color:#1a237e;font-size:20px;margin-bottom:4px}
+    h2{color:#666;font-size:14px;font-weight:normal;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{background:#1a237e;color:#fff;padding:10px 8px;text-align:left;font-size:12px;border:1px solid #1a237e}
+    </style></head><body>
+    <h1>🏥 Relatório SBAR - ${sector}</h1>
+    <h2>${profDisplay} | Gerado em: ${dateStr} | Por: ${currentUser.name} (${currentUser.email})</h2>
+    <table>
+      <thead><tr><th style="width:15%">Paciente</th><th style="width:18%">S - Situação</th><th style="width:17%">B - Background</th><th style="width:22%">A - Avaliação</th><th style="width:15%">R - Recomendação</th><th style="width:13%">Data/Profissional</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
 }
 
 function showToast(msg){ const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000); }
