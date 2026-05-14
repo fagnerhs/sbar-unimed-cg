@@ -25,3 +25,4 @@ O servidor roda na porta 3000 (ou PORT definida por variável de ambiente).
 
 - Email: admin@unimedcg.coop.br
 - Senha: admin123 (alterar após primeiro acesso)
+# Updated Thu May 14 16:40:47 EDT 2026
