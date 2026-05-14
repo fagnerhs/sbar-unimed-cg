@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sbar-unimed-v3';
+const CACHE_NAME = 'sbar-unimed-v4';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -14,6 +14,11 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('fetch', event => {
+  // Always go network-first for API calls
+  if (event.request.url.includes('/api/')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
   event.respondWith(
     fetch(event.request)
       .then(response => {

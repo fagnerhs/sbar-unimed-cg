@@ -245,7 +245,7 @@ const server = http.createServer(async (req, res) => {
   try {
     const content = fs.readFileSync(filePath);
     const headers = { 'Content-Type': contentType };
-    if (ext === '.html' || ext === '') {
+    if (ext === '.html' || ext === '' || ext === '.js' || ext === '.json') {
       headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
       headers['Pragma'] = 'no-cache'; headers['Expires'] = '0';
     }
