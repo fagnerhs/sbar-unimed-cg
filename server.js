@@ -1,16 +1,20 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { MongoClient, ObjectId } = require('mongodb');
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
-const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://fagnersato_db_user:f8b7P1SILe2cDvx6@cluster0.7y9dyzb.mongodb.net/?appName=Cluster0';
+const DATA_DIR = path.join(__dirname, 'data');
+const MONGO_URI = process.env.MONGO_URI || '';
 const DB_NAME = 'sbar_unimed_cg';
 
-let db;
+// Ensure data directory exists for JSON fallback
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
-// Admin user template
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const PATIENTS_FILE = path.join(DATA_DIR, 'patients.json');
+const SBAR_FILE = path.join(DATA_DIR, 'sbar.json');
+
 const adminUser = {
   id: 'admin_001',
   name: 'Administrador',
@@ -23,249 +27,234 @@ const adminUser = {
   status: 'active'
 };
 
-async function connectDB(retries = 5) {
-  for (let i = 0; i < retries; i++) {
+// ============ STORAGE ABSTRACTION ============
+let storage = null;
+
+// --- JSON FILE STORAGE ---
+const jsonStorage = {
+  name: 'JSON File',
+  init() {
+    function initFile(file, def) {
+      if (!fs.existsSync(file)) fs.writeFileSync(file, JSON.stringify(def, null, 2));
+    }
+    initFile(USERS_FILE, [adminUser]);
+    initFile(PATIENTS_FILE, []);
+    initFile(SBAR_FILE, []);
+    const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+    if (!users.find(u => u.email === 'admin@unimedcg.coop.br')) {
+      users.push(adminUser);
+      fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+    }
+  },
+  readUsers() { try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); } catch(e) { return []; } },
+  writeUsers(d) { fs.writeFileSync(USERS_FILE, JSON.stringify(d, null, 2)); },
+  readPatients() { try { return JSON.parse(fs.readFileSync(PATIENTS_FILE, 'utf8')); } catch(e) { return []; } },
+  writePatients(d) { fs.writeFileSync(PATIENTS_FILE, JSON.stringify(d, null, 2)); },
+  readSbar() { try { return JSON.parse(fs.readFileSync(SBAR_FILE, 'utf8')); } catch(e) { return []; } },
+  writeSbar(d) { fs.writeFileSync(SBAR_FILE, JSON.stringify(d, null, 2)); },
+
+  async findUser(query) { return this.readUsers().find(u => Object.keys(query).every(k => u[k] === query[k])) || null; },
+  async getUsers() { return this.readUsers(); },
+  async addUser(u) { const users = this.readUsers(); users.push(u); this.writeUsers(users); return u; },
+  async updateUser(id, data) { const users = this.readUsers(); const i = users.findIndex(u => u.id === id); if (i === -1) return null; Object.assign(users[i], data); this.writeUsers(users); return users[i]; },
+  async deleteUser(id) { let users = this.readUsers(); users = users.filter(u => u.id !== id); this.writeUsers(users); },
+  async getPatients() { return this.readPatients(); },
+  async addPatient(p) { const pts = this.readPatients(); pts.push(p); this.writePatients(pts); return p; },
+  async updatePatient(id, data) { const pts = this.readPatients(); const i = pts.findIndex(p => p.id === id); if (i === -1) return null; Object.assign(pts[i], data); this.writePatients(pts); return pts[i]; },
+  async getSbar() { return this.readSbar(); },
+  async addSbar(r) { const recs = this.readSbar(); recs.unshift(r); this.writeSbar(recs); return r; }
+};
+
+// --- MONGODB STORAGE ---
+function createMongoStorage(db) {
+  function toFrontend(doc) { if (!doc) return doc; const o = { ...doc }; if (o._id && !o.id) o.id = o._id.toString(); delete o._id; return o; }
+  return {
+    name: 'MongoDB Atlas',
+    async findUser(query) { return toFrontend(await db.collection('users').findOne(query)); },
+    async getUsers() { return (await db.collection('users').find({}).toArray()).map(toFrontend); },
+    async addUser(u) { await db.collection('users').insertOne(u); return toFrontend(u); },
+    async updateUser(id, data) { delete data._id; const r = await db.collection('users').findOneAndUpdate({ id }, { $set: data }, { returnDocument: 'after' }); return r ? toFrontend(r) : null; },
+    async deleteUser(id) { await db.collection('users').deleteOne({ id }); },
+    async getPatients() { return (await db.collection('patients').find({}).toArray()).map(toFrontend); },
+    async addPatient(p) { await db.collection('patients').insertOne(p); return toFrontend(p); },
+    async updatePatient(id, data) { delete data._id; const r = await db.collection('patients').findOneAndUpdate({ id }, { $set: data }, { returnDocument: 'after' }); return r ? toFrontend(r) : null; },
+    async getSbar() { return (await db.collection('sbar').find({}).sort({ timestamp: -1 }).toArray()).map(toFrontend); },
+    async addSbar(r) { await db.collection('sbar').insertOne(r); return toFrontend(r); }
+  };
+}
+
+async function initStorage() {
+  if (MONGO_URI) {
     try {
-      console.log(`Connecting to MongoDB Atlas (attempt ${i+1}/${retries})...`);
+      console.log('Attempting MongoDB Atlas connection...');
+      const { MongoClient } = require('mongodb');
       const client = new MongoClient(MONGO_URI, {
         serverSelectionTimeoutMS: 10000,
         connectTimeoutMS: 10000
       });
       await client.connect();
-      db = client.db(DB_NAME);
-      console.log('Connected to MongoDB Atlas successfully!');
+      const db = client.db(DB_NAME);
+      console.log('Connected to MongoDB Atlas!');
 
-      // Ensure admin exists
-      const existingAdmin = await db.collection('users').findOne({ email: 'admin@unimedcg.coop.br' });
-      if (!existingAdmin) {
-        await db.collection('users').insertOne(adminUser);
-        console.log('Admin user created');
-      }
+      // Ensure admin
+      const admin = await db.collection('users').findOne({ email: 'admin@unimedcg.coop.br' });
+      if (!admin) { await db.collection('users').insertOne(adminUser); console.log('Admin created in MongoDB'); }
 
-      // Create indexes for performance
-      await db.collection('users').createIndex({ email: 1 }, { unique: true });
-      await db.collection('patients').createIndex({ sector: 1 });
-      await db.collection('sbar').createIndex({ patientId: 1 });
-      await db.collection('sbar').createIndex({ timestamp: -1 });
-      console.log('Database indexes created');
-      return; // success
+      // Indexes
+      await db.collection('users').createIndex({ email: 1 }, { unique: true }).catch(() => {});
+      await db.collection('users').createIndex({ id: 1 }).catch(() => {});
+      await db.collection('patients').createIndex({ id: 1 }).catch(() => {});
+      await db.collection('patients').createIndex({ sector: 1 }).catch(() => {});
+      await db.collection('sbar').createIndex({ patientId: 1 }).catch(() => {});
+      await db.collection('sbar').createIndex({ timestamp: -1 }).catch(() => {});
+
+      storage = createMongoStorage(db);
+      console.log('Using MongoDB Atlas for data storage');
+      return;
     } catch (e) {
-      console.error(`MongoDB connection attempt ${i+1} failed:`, e.message);
-      if (i < retries - 1) {
-        console.log('Retrying in 3 seconds...');
-        await new Promise(r => setTimeout(r, 3000));
-      } else {
-        console.error('All connection attempts failed. Exiting.');
-        process.exit(1);
-      }
+      console.error('MongoDB connection failed:', e.message);
+      console.log('Falling back to JSON file storage...');
     }
+  } else {
+    console.log('No MONGO_URI set.');
   }
+
+  // Fallback to JSON
+  jsonStorage.init();
+  storage = jsonStorage;
+  console.log('Using JSON file storage');
 }
 
 function parseBody(req) {
   return new Promise((resolve) => {
     let body = '';
     req.on('data', chunk => body += chunk);
-    req.on('end', () => {
-      try { resolve(JSON.parse(body)); }
-      catch(e) { resolve({}); }
-    });
+    req.on('end', () => { try { resolve(JSON.parse(body)); } catch(e) { resolve({}); } });
   });
 }
 
-// Convert MongoDB _id to id for frontend compatibility
-function toFrontend(doc) {
-  if (!doc) return doc;
-  const obj = { ...doc };
-  if (obj._id && !obj.id) {
-    obj.id = obj._id.toString();
-  }
-  delete obj._id;
-  return obj;
-}
-
-function toFrontendArray(docs) {
-  return docs.map(toFrontend);
-}
-
 const MIME_TYPES = {
-  '.html': 'text/html',
-  '.css': 'text/css',
-  '.js': 'application/javascript',
-  '.json': 'application/json',
-  '.png': 'image/png',
-  '.ico': 'image/x-icon',
-  '.svg': 'image/svg+xml'
+  '.html': 'text/html', '.css': 'text/css', '.js': 'application/javascript',
+  '.json': 'application/json', '.png': 'image/png', '.ico': 'image/x-icon', '.svg': 'image/svg+xml'
 };
 
 const server = http.createServer(async (req, res) => {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
   if (req.method === 'OPTIONS') { res.writeHead(200); res.end(); return; }
 
-  // API Routes
   if (req.url.startsWith('/api/')) {
     res.setHeader('Content-Type', 'application/json');
-
     try {
       // POST /api/login
       if (req.url === '/api/login' && req.method === 'POST') {
         const body = await parseBody(req);
-        const user = await db.collection('users').findOne({ email: body.email, password: body.password });
+        const user = await storage.findUser({ email: body.email, password: body.password });
         if (!user) { res.writeHead(401); res.end(JSON.stringify({ error: 'E-mail ou senha incorretos' })); return; }
         if (user.status === 'pending') { res.writeHead(403); res.end(JSON.stringify({ error: 'Seu cadastro aguarda aprovação do administrador' })); return; }
         if (user.status === 'inactive') { res.writeHead(403); res.end(JSON.stringify({ error: 'Seu acesso foi desativado. Contate o administrador.' })); return; }
-        res.writeHead(200);
-        res.end(JSON.stringify(toFrontend(user)));
-        return;
+        res.writeHead(200); res.end(JSON.stringify(user)); return;
       }
 
       // GET /api/users
       if (req.url === '/api/users' && req.method === 'GET') {
-        const users = await db.collection('users').find({}).toArray();
-        res.writeHead(200);
-        res.end(JSON.stringify(toFrontendArray(users)));
-        return;
+        res.writeHead(200); res.end(JSON.stringify(await storage.getUsers())); return;
       }
 
-      // POST /api/users (register)
+      // POST /api/users
       if (req.url === '/api/users' && req.method === 'POST') {
         const body = await parseBody(req);
-        const existing = await db.collection('users').findOne({ email: body.email });
-        if (existing) {
-          res.writeHead(409);
-          res.end(JSON.stringify({ error: 'E-mail já cadastrado' }));
-          return;
-        }
-        body.id = Date.now().toString();
-        body.role = 'user';
-        body.status = 'pending';
-        await db.collection('users').insertOne(body);
-        res.writeHead(201);
-        res.end(JSON.stringify(toFrontend(body)));
-        return;
+        const existing = await storage.findUser({ email: body.email });
+        if (existing) { res.writeHead(409); res.end(JSON.stringify({ error: 'E-mail já cadastrado' })); return; }
+        body.id = Date.now().toString(); body.role = 'user'; body.status = 'pending';
+        const user = await storage.addUser(body);
+        res.writeHead(201); res.end(JSON.stringify(user)); return;
       }
 
       // PUT /api/users/:id
       if (req.url.match(/^\/api\/users\/[^/]+$/) && req.method === 'PUT') {
         const id = req.url.split('/').pop();
         const body = await parseBody(req);
-        delete body._id; // prevent _id update conflict
-        const result = await db.collection('users').findOneAndUpdate(
-          { id: id },
-          { $set: body },
-          { returnDocument: 'after' }
-        );
-        if (!result) { res.writeHead(404); res.end(JSON.stringify({ error: 'Usuário não encontrado' })); return; }
-        res.writeHead(200);
-        res.end(JSON.stringify(toFrontend(result)));
-        return;
+        const user = await storage.updateUser(id, body);
+        if (!user) { res.writeHead(404); res.end(JSON.stringify({ error: 'Usuário não encontrado' })); return; }
+        res.writeHead(200); res.end(JSON.stringify(user)); return;
       }
 
       // DELETE /api/users/:id
       if (req.url.match(/^\/api\/users\/[^/]+$/) && req.method === 'DELETE') {
-        const id = req.url.split('/').pop();
-        await db.collection('users').deleteOne({ id: id });
-        res.writeHead(200);
-        res.end(JSON.stringify({ success: true }));
-        return;
+        await storage.deleteUser(req.url.split('/').pop());
+        res.writeHead(200); res.end(JSON.stringify({ success: true })); return;
       }
 
       // GET /api/patients
       if (req.url === '/api/patients' && req.method === 'GET') {
-        const patients = await db.collection('patients').find({}).toArray();
-        res.writeHead(200);
-        res.end(JSON.stringify(toFrontendArray(patients)));
-        return;
+        res.writeHead(200); res.end(JSON.stringify(await storage.getPatients())); return;
       }
 
       // POST /api/patients
       if (req.url === '/api/patients' && req.method === 'POST') {
-        const body = await parseBody(req);
-        body.id = Date.now().toString();
-        await db.collection('patients').insertOne(body);
-        res.writeHead(201);
-        res.end(JSON.stringify(toFrontend(body)));
-        return;
+        const body = await parseBody(req); body.id = Date.now().toString();
+        const p = await storage.addPatient(body);
+        res.writeHead(201); res.end(JSON.stringify(p)); return;
       }
 
       // PUT /api/patients/:id
       if (req.url.match(/^\/api\/patients\/[^/]+$/) && req.method === 'PUT') {
         const id = req.url.split('/').pop();
         const body = await parseBody(req);
-        delete body._id;
-        const result = await db.collection('patients').findOneAndUpdate(
-          { id: id },
-          { $set: body },
-          { returnDocument: 'after' }
-        );
-        if (!result) { res.writeHead(404); res.end(JSON.stringify({ error: 'Paciente não encontrado' })); return; }
-        res.writeHead(200);
-        res.end(JSON.stringify(toFrontend(result)));
-        return;
+        const p = await storage.updatePatient(id, body);
+        if (!p) { res.writeHead(404); res.end(JSON.stringify({ error: 'Paciente não encontrado' })); return; }
+        res.writeHead(200); res.end(JSON.stringify(p)); return;
       }
 
       // GET /api/sbar
       if (req.url === '/api/sbar' && req.method === 'GET') {
-        const records = await db.collection('sbar').find({}).sort({ timestamp: -1 }).toArray();
-        res.writeHead(200);
-        res.end(JSON.stringify(toFrontendArray(records)));
-        return;
+        res.writeHead(200); res.end(JSON.stringify(await storage.getSbar())); return;
       }
 
       // POST /api/sbar
       if (req.url === '/api/sbar' && req.method === 'POST') {
-        const body = await parseBody(req);
-        body.id = Date.now().toString();
-        await db.collection('sbar').insertOne(body);
-        res.writeHead(201);
-        res.end(JSON.stringify(toFrontend(body)));
-        return;
+        const body = await parseBody(req); body.id = Date.now().toString();
+        const r = await storage.addSbar(body);
+        res.writeHead(201); res.end(JSON.stringify(r)); return;
       }
 
-      res.writeHead(404);
-      res.end(JSON.stringify({ error: 'Rota não encontrada' }));
-
+      res.writeHead(404); res.end(JSON.stringify({ error: 'Rota não encontrada' }));
     } catch (e) {
       console.error('API Error:', e.message);
-      res.writeHead(500);
-      res.end(JSON.stringify({ error: 'Erro interno do servidor' }));
+      res.writeHead(500); res.end(JSON.stringify({ error: 'Erro interno do servidor' }));
     }
     return;
   }
 
-  // Static file serving with no-cache headers for HTML
+  // Static files
   let filePath = path.join(PUBLIC_DIR, req.url === '/' ? 'index.html' : req.url);
   const ext = path.extname(filePath);
-
-  if (!fs.existsSync(filePath)) {
-    filePath = path.join(PUBLIC_DIR, 'index.html');
-  }
-
+  if (!fs.existsSync(filePath)) filePath = path.join(PUBLIC_DIR, 'index.html');
   const contentType = MIME_TYPES[ext] || 'text/html';
   try {
     const content = fs.readFileSync(filePath);
     const headers = { 'Content-Type': contentType };
     if (ext === '.html' || ext === '') {
       headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
-      headers['Pragma'] = 'no-cache';
-      headers['Expires'] = '0';
+      headers['Pragma'] = 'no-cache'; headers['Expires'] = '0';
     }
-    res.writeHead(200, headers);
-    res.end(content);
-  } catch(e) {
-    res.writeHead(500);
-    res.end('Server Error');
-  }
+    res.writeHead(200, headers); res.end(content);
+  } catch(e) { res.writeHead(500); res.end('Server Error'); }
 });
 
-// Start server after DB connection
-connectDB().then(() => {
+initStorage().then(() => {
   server.listen(PORT, '0.0.0.0', () => {
-    console.log(`SBAR Unimed CG Server running on http://0.0.0.0:${PORT}`);
-    console.log(`Connected to MongoDB Atlas - Database: ${DB_NAME}`);
+    console.log(`SBAR Unimed CG running on http://0.0.0.0:${PORT}`);
+    console.log(`Storage: ${storage.name}`);
+  });
+}).catch(e => {
+  console.error('Fatal error:', e.message);
+  // Start with JSON fallback anyway
+  jsonStorage.init();
+  storage = jsonStorage;
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`SBAR Unimed CG running on http://0.0.0.0:${PORT} (JSON fallback)`);
   });
 });
