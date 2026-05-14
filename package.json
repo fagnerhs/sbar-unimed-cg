@@ -1,14 +1,19 @@
 {
-  "name": "sbar-unimed-cg",
+  "name": "sbar-app",
   "version": "1.0.0",
-  "description": "App PWA SBAR Unimed CG - Passagem de plantão multiprofissional",
   "main": "server.js",
   "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "App PWA SBAR Unimed CG",
+  "dependencies": {
+    "mongodb": "^6.21.0"
   },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "keywords": ["sbar", "pwa", "healthcare", "unimed"],
-  "license": "MIT"
+  }
 }

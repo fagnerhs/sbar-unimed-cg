@@ -1,35 +1,16 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { MongoClient, ObjectId } = require('mongodb');
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
+const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://fagnersato_db_user:f8b7P1SILe2cDvx6@cluster0.7y9dyzb.mongodb.net/?appName=Cluster0';
+const DB_NAME = 'sbar_unimed_cg';
 
-// Use /opt/render/project/data on Render (persistent disk), fallback to local data dir
-const RENDER_DISK = '/opt/render/project/data';
-const DATA_DIR = fs.existsSync(RENDER_DISK) ? RENDER_DISK : path.join(__dirname, 'data');
+let db;
 
-// Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-
-// Data files
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
-const PATIENTS_FILE = path.join(DATA_DIR, 'patients.json');
-const SBAR_FILE = path.join(DATA_DIR, 'sbar.json');
-
-console.log(`Data directory: ${DATA_DIR}`);
-
-// Initialize data files ONLY if they don't exist (preserves existing data)
-function initDataFile(file, defaultData) {
-  if (!fs.existsSync(file)) {
-    fs.writeFileSync(file, JSON.stringify(defaultData, null, 2));
-    console.log(`Created new data file: ${file}`);
-  } else {
-    console.log(`Existing data file found: ${file}`);
-  }
-}
-
-// Initialize with admin user
+// Admin user template
 const adminUser = {
   id: 'admin_001',
   name: 'Administrador',
@@ -42,28 +23,29 @@ const adminUser = {
   status: 'active'
 };
 
-initDataFile(USERS_FILE, [adminUser]);
-initDataFile(PATIENTS_FILE, []);
-initDataFile(SBAR_FILE, []);
-
-// Ensure admin exists in existing data
-let usersInit = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
-if (!usersInit.find(u => u.email === 'admin@unimedcg.coop.br')) {
-  usersInit.push(adminUser);
-  fs.writeFileSync(USERS_FILE, JSON.stringify(usersInit, null, 2));
-  console.log('Admin user added to existing data');
-}
-
-function readJSON(file) {
-  try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
-  catch(e) { console.error(`Error reading ${file}:`, e.message); return []; }
-}
-
-function writeJSON(file, data) {
+async function connectDB() {
   try {
-    fs.writeFileSync(file, JSON.stringify(data, null, 2));
-  } catch(e) {
-    console.error(`Error writing ${file}:`, e.message);
+    const client = new MongoClient(MONGO_URI);
+    await client.connect();
+    db = client.db(DB_NAME);
+    console.log('Connected to MongoDB Atlas');
+
+    // Ensure admin exists
+    const existingAdmin = await db.collection('users').findOne({ email: 'admin@unimedcg.coop.br' });
+    if (!existingAdmin) {
+      await db.collection('users').insertOne(adminUser);
+      console.log('Admin user created');
+    }
+
+    // Create indexes for performance
+    await db.collection('users').createIndex({ email: 1 }, { unique: true });
+    await db.collection('patients').createIndex({ sector: 1 });
+    await db.collection('sbar').createIndex({ patientId: 1 });
+    await db.collection('sbar').createIndex({ timestamp: -1 });
+    console.log('Database indexes created');
+  } catch (e) {
+    console.error('MongoDB connection error:', e.message);
+    process.exit(1);
   }
 }
 
@@ -76,6 +58,21 @@ function parseBody(req) {
       catch(e) { resolve({}); }
     });
   });
+}
+
+// Convert MongoDB _id to id for frontend compatibility
+function toFrontend(doc) {
+  if (!doc) return doc;
+  const obj = { ...doc };
+  if (obj._id && !obj.id) {
+    obj.id = obj._id.toString();
+  }
+  delete obj._id;
+  return obj;
+}
+
+function toFrontendArray(docs) {
+  return docs.map(toFrontend);
 }
 
 const MIME_TYPES = {
@@ -100,124 +97,130 @@ const server = http.createServer(async (req, res) => {
   if (req.url.startsWith('/api/')) {
     res.setHeader('Content-Type', 'application/json');
 
-    // POST /api/login
-    if (req.url === '/api/login' && req.method === 'POST') {
-      const body = await parseBody(req);
-      const users = readJSON(USERS_FILE);
-      const user = users.find(u => u.email === body.email && u.password === body.password);
-      if (!user) { res.writeHead(401); res.end(JSON.stringify({ error: 'E-mail ou senha incorretos' })); return; }
-      if (user.status === 'pending') { res.writeHead(403); res.end(JSON.stringify({ error: 'Seu cadastro aguarda aprovação do administrador' })); return; }
-      if (user.status === 'inactive') { res.writeHead(403); res.end(JSON.stringify({ error: 'Seu acesso foi desativado. Contate o administrador.' })); return; }
-      res.writeHead(200);
-      res.end(JSON.stringify(user));
-      return;
-    }
-
-    // GET /api/users
-    if (req.url === '/api/users' && req.method === 'GET') {
-      res.writeHead(200);
-      res.end(JSON.stringify(readJSON(USERS_FILE)));
-      return;
-    }
-
-    // POST /api/users (register)
-    if (req.url === '/api/users' && req.method === 'POST') {
-      const body = await parseBody(req);
-      const users = readJSON(USERS_FILE);
-      if (users.find(u => u.email === body.email)) {
-        res.writeHead(409);
-        res.end(JSON.stringify({ error: 'E-mail já cadastrado' }));
+    try {
+      // POST /api/login
+      if (req.url === '/api/login' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const user = await db.collection('users').findOne({ email: body.email, password: body.password });
+        if (!user) { res.writeHead(401); res.end(JSON.stringify({ error: 'E-mail ou senha incorretos' })); return; }
+        if (user.status === 'pending') { res.writeHead(403); res.end(JSON.stringify({ error: 'Seu cadastro aguarda aprovação do administrador' })); return; }
+        if (user.status === 'inactive') { res.writeHead(403); res.end(JSON.stringify({ error: 'Seu acesso foi desativado. Contate o administrador.' })); return; }
+        res.writeHead(200);
+        res.end(JSON.stringify(toFrontend(user)));
         return;
       }
-      body.id = Date.now().toString();
-      body.role = 'user';
-      body.status = 'pending';
-      users.push(body);
-      writeJSON(USERS_FILE, users);
-      res.writeHead(201);
-      res.end(JSON.stringify(body));
-      return;
-    }
 
-    // PUT /api/users/:id
-    if (req.url.match(/^\/api\/users\/[^/]+$/) && req.method === 'PUT') {
-      const id = req.url.split('/').pop();
-      const body = await parseBody(req);
-      const users = readJSON(USERS_FILE);
-      const idx = users.findIndex(u => u.id === id);
-      if (idx === -1) { res.writeHead(404); res.end(JSON.stringify({ error: 'Usuário não encontrado' })); return; }
-      Object.assign(users[idx], body);
-      writeJSON(USERS_FILE, users);
-      res.writeHead(200);
-      res.end(JSON.stringify(users[idx]));
-      return;
-    }
+      // GET /api/users
+      if (req.url === '/api/users' && req.method === 'GET') {
+        const users = await db.collection('users').find({}).toArray();
+        res.writeHead(200);
+        res.end(JSON.stringify(toFrontendArray(users)));
+        return;
+      }
 
-    // DELETE /api/users/:id
-    if (req.url.match(/^\/api\/users\/[^/]+$/) && req.method === 'DELETE') {
-      const id = req.url.split('/').pop();
-      let users = readJSON(USERS_FILE);
-      users = users.filter(u => u.id !== id);
-      writeJSON(USERS_FILE, users);
-      res.writeHead(200);
-      res.end(JSON.stringify({ success: true }));
-      return;
-    }
+      // POST /api/users (register)
+      if (req.url === '/api/users' && req.method === 'POST') {
+        const body = await parseBody(req);
+        const existing = await db.collection('users').findOne({ email: body.email });
+        if (existing) {
+          res.writeHead(409);
+          res.end(JSON.stringify({ error: 'E-mail já cadastrado' }));
+          return;
+        }
+        body.id = Date.now().toString();
+        body.role = 'user';
+        body.status = 'pending';
+        await db.collection('users').insertOne(body);
+        res.writeHead(201);
+        res.end(JSON.stringify(toFrontend(body)));
+        return;
+      }
 
-    // GET /api/patients
-    if (req.url === '/api/patients' && req.method === 'GET') {
-      res.writeHead(200);
-      res.end(JSON.stringify(readJSON(PATIENTS_FILE)));
-      return;
-    }
+      // PUT /api/users/:id
+      if (req.url.match(/^\/api\/users\/[^/]+$/) && req.method === 'PUT') {
+        const id = req.url.split('/').pop();
+        const body = await parseBody(req);
+        delete body._id; // prevent _id update conflict
+        const result = await db.collection('users').findOneAndUpdate(
+          { id: id },
+          { $set: body },
+          { returnDocument: 'after' }
+        );
+        if (!result) { res.writeHead(404); res.end(JSON.stringify({ error: 'Usuário não encontrado' })); return; }
+        res.writeHead(200);
+        res.end(JSON.stringify(toFrontend(result)));
+        return;
+      }
 
-    // POST /api/patients
-    if (req.url === '/api/patients' && req.method === 'POST') {
-      const body = await parseBody(req);
-      const patients = readJSON(PATIENTS_FILE);
-      body.id = Date.now().toString();
-      patients.push(body);
-      writeJSON(PATIENTS_FILE, patients);
-      res.writeHead(201);
-      res.end(JSON.stringify(body));
-      return;
-    }
+      // DELETE /api/users/:id
+      if (req.url.match(/^\/api\/users\/[^/]+$/) && req.method === 'DELETE') {
+        const id = req.url.split('/').pop();
+        await db.collection('users').deleteOne({ id: id });
+        res.writeHead(200);
+        res.end(JSON.stringify({ success: true }));
+        return;
+      }
 
-    // PUT /api/patients/:id
-    if (req.url.match(/^\/api\/patients\/[^/]+$/) && req.method === 'PUT') {
-      const id = req.url.split('/').pop();
-      const body = await parseBody(req);
-      const patients = readJSON(PATIENTS_FILE);
-      const idx = patients.findIndex(p => p.id === id);
-      if (idx === -1) { res.writeHead(404); res.end(JSON.stringify({ error: 'Paciente não encontrado' })); return; }
-      Object.assign(patients[idx], body);
-      writeJSON(PATIENTS_FILE, patients);
-      res.writeHead(200);
-      res.end(JSON.stringify(patients[idx]));
-      return;
-    }
+      // GET /api/patients
+      if (req.url === '/api/patients' && req.method === 'GET') {
+        const patients = await db.collection('patients').find({}).toArray();
+        res.writeHead(200);
+        res.end(JSON.stringify(toFrontendArray(patients)));
+        return;
+      }
 
-    // GET /api/sbar
-    if (req.url === '/api/sbar' && req.method === 'GET') {
-      res.writeHead(200);
-      res.end(JSON.stringify(readJSON(SBAR_FILE)));
-      return;
-    }
+      // POST /api/patients
+      if (req.url === '/api/patients' && req.method === 'POST') {
+        const body = await parseBody(req);
+        body.id = Date.now().toString();
+        await db.collection('patients').insertOne(body);
+        res.writeHead(201);
+        res.end(JSON.stringify(toFrontend(body)));
+        return;
+      }
 
-    // POST /api/sbar
-    if (req.url === '/api/sbar' && req.method === 'POST') {
-      const body = await parseBody(req);
-      const records = readJSON(SBAR_FILE);
-      body.id = Date.now().toString();
-      records.unshift(body);
-      writeJSON(SBAR_FILE, records);
-      res.writeHead(201);
-      res.end(JSON.stringify(body));
-      return;
-    }
+      // PUT /api/patients/:id
+      if (req.url.match(/^\/api\/patients\/[^/]+$/) && req.method === 'PUT') {
+        const id = req.url.split('/').pop();
+        const body = await parseBody(req);
+        delete body._id;
+        const result = await db.collection('patients').findOneAndUpdate(
+          { id: id },
+          { $set: body },
+          { returnDocument: 'after' }
+        );
+        if (!result) { res.writeHead(404); res.end(JSON.stringify({ error: 'Paciente não encontrado' })); return; }
+        res.writeHead(200);
+        res.end(JSON.stringify(toFrontend(result)));
+        return;
+      }
 
-    res.writeHead(404);
-    res.end(JSON.stringify({ error: 'Rota não encontrada' }));
+      // GET /api/sbar
+      if (req.url === '/api/sbar' && req.method === 'GET') {
+        const records = await db.collection('sbar').find({}).sort({ timestamp: -1 }).toArray();
+        res.writeHead(200);
+        res.end(JSON.stringify(toFrontendArray(records)));
+        return;
+      }
+
+      // POST /api/sbar
+      if (req.url === '/api/sbar' && req.method === 'POST') {
+        const body = await parseBody(req);
+        body.id = Date.now().toString();
+        await db.collection('sbar').insertOne(body);
+        res.writeHead(201);
+        res.end(JSON.stringify(toFrontend(body)));
+        return;
+      }
+
+      res.writeHead(404);
+      res.end(JSON.stringify({ error: 'Rota não encontrada' }));
+
+    } catch (e) {
+      console.error('API Error:', e.message);
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: 'Erro interno do servidor' }));
+    }
     return;
   }
 
@@ -233,7 +236,6 @@ const server = http.createServer(async (req, res) => {
   try {
     const content = fs.readFileSync(filePath);
     const headers = { 'Content-Type': contentType };
-    // Prevent caching of HTML to always serve latest version
     if (ext === '.html' || ext === '') {
       headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
       headers['Pragma'] = 'no-cache';
@@ -247,7 +249,10 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`SBAR Unimed CG Server running on http://0.0.0.0:${PORT}`);
-  console.log(`Data stored in: ${DATA_DIR}`);
+// Start server after DB connection
+connectDB().then(() => {
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`SBAR Unimed CG Server running on http://0.0.0.0:${PORT}`);
+    console.log(`Connected to MongoDB Atlas - Database: ${DB_NAME}`);
+  });
 });
