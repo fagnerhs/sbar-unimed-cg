@@ -61,6 +61,7 @@ const jsonStorage = {
   async getPatients() { return this.readPatients(); },
   async addPatient(p) { const pts = this.readPatients(); pts.push(p); this.writePatients(pts); return p; },
   async updatePatient(id, data) { const pts = this.readPatients(); const i = pts.findIndex(p => p.id === id); if (i === -1) return null; Object.assign(pts[i], data); this.writePatients(pts); return pts[i]; },
+  async deletePatient(id) { let pts = this.readPatients(); pts = pts.filter(p => p.id !== id); this.writePatients(pts); },
   async getSbar() { return this.readSbar(); },
   async addSbar(r) { const recs = this.readSbar(); recs.unshift(r); this.writeSbar(recs); return r; }
 };
@@ -78,6 +79,7 @@ function createMongoStorage(db) {
     async getPatients() { return (await db.collection('patients').find({}).toArray()).map(toFrontend); },
     async addPatient(p) { await db.collection('patients').insertOne(p); return toFrontend(p); },
     async updatePatient(id, data) { delete data._id; const r = await db.collection('patients').findOneAndUpdate({ id }, { $set: data }, { returnDocument: 'after' }); return r ? toFrontend(r) : null; },
+    async deletePatient(id) { await db.collection('patients').deleteOne({ id }); },
     async getSbar() { return (await db.collection('sbar').find({}).sort({ timestamp: -1 }).toArray()).map(toFrontend); },
     async addSbar(r) { await db.collection('sbar').insertOne(r); return toFrontend(r); }
   };
@@ -206,6 +208,13 @@ const server = http.createServer(async (req, res) => {
         const p = await storage.updatePatient(id, body);
         if (!p) { res.writeHead(404); res.end(JSON.stringify({ error: 'Paciente não encontrado' })); return; }
         res.writeHead(200); res.end(JSON.stringify(p)); return;
+      }
+
+      // DELETE /api/patients/:id
+      if (req.url.match(/^\/api\/patients\/[^/]+$/) && req.method === 'DELETE') {
+        const id = req.url.split('/').pop();
+        await storage.deletePatient(id);
+        res.writeHead(200); res.end(JSON.stringify({ success: true })); return;
       }
 
       // GET /api/sbar
