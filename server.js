@@ -23,29 +23,42 @@ const adminUser = {
   status: 'active'
 };
 
-async function connectDB() {
-  try {
-    const client = new MongoClient(MONGO_URI);
-    await client.connect();
-    db = client.db(DB_NAME);
-    console.log('Connected to MongoDB Atlas');
+async function connectDB(retries = 5) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      console.log(`Connecting to MongoDB Atlas (attempt ${i+1}/${retries})...`);
+      const client = new MongoClient(MONGO_URI, {
+        serverSelectionTimeoutMS: 10000,
+        connectTimeoutMS: 10000
+      });
+      await client.connect();
+      db = client.db(DB_NAME);
+      console.log('Connected to MongoDB Atlas successfully!');
 
-    // Ensure admin exists
-    const existingAdmin = await db.collection('users').findOne({ email: 'admin@unimedcg.coop.br' });
-    if (!existingAdmin) {
-      await db.collection('users').insertOne(adminUser);
-      console.log('Admin user created');
+      // Ensure admin exists
+      const existingAdmin = await db.collection('users').findOne({ email: 'admin@unimedcg.coop.br' });
+      if (!existingAdmin) {
+        await db.collection('users').insertOne(adminUser);
+        console.log('Admin user created');
+      }
+
+      // Create indexes for performance
+      await db.collection('users').createIndex({ email: 1 }, { unique: true });
+      await db.collection('patients').createIndex({ sector: 1 });
+      await db.collection('sbar').createIndex({ patientId: 1 });
+      await db.collection('sbar').createIndex({ timestamp: -1 });
+      console.log('Database indexes created');
+      return; // success
+    } catch (e) {
+      console.error(`MongoDB connection attempt ${i+1} failed:`, e.message);
+      if (i < retries - 1) {
+        console.log('Retrying in 3 seconds...');
+        await new Promise(r => setTimeout(r, 3000));
+      } else {
+        console.error('All connection attempts failed. Exiting.');
+        process.exit(1);
+      }
     }
-
-    // Create indexes for performance
-    await db.collection('users').createIndex({ email: 1 }, { unique: true });
-    await db.collection('patients').createIndex({ sector: 1 });
-    await db.collection('sbar').createIndex({ patientId: 1 });
-    await db.collection('sbar').createIndex({ timestamp: -1 });
-    console.log('Database indexes created');
-  } catch (e) {
-    console.error('MongoDB connection error:', e.message);
-    process.exit(1);
   }
 }
 
