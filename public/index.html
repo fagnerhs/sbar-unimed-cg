@@ -479,8 +479,21 @@ const PROF_CONFIG = {
       { type:'select', id:'padRespFisio', label:'Padrão Respiratório', options:['','Eupneico','Taquipneico','Bradipneico','Dispneico','Tiragem Intercostal','Tiragem de Fúrcula','Batimento de Asa de Nariz'] },
       { type:'select', id:'numSessoes', label:'Número de Sessões de Fisioterapia', options:['','1 sessão','2 sessões','3 sessões'] },
       { type:'number', id:'fio2', label:'FiO2 (%)', placeholder:'21-100', min:21, max:100 },
-      { type:'number', id:'peep', label:'PEEP (cmH2O)', placeholder:'0-30', min:0, max:30 },
       { type:'number', id:'freqResp', label:'FR (irpm)', placeholder:'10-30', min:0, max:60 },
+      { type:'select', id:'icuIms', label:'Escala de Mobilidade (ICU-IMS)', options:[
+        '',
+        '0 - Nada (passivo no leito)',
+        '1 - Exercícios no leito (passivo/ativo)',
+        '2 - Sentar no leito (com auxílio)',
+        '3 - Sentar na beira do leito',
+        '4 - Transferência para poltrona',
+        '5 - Ortostatismo (ficar em pé)',
+        '6 - Marcha estacionária',
+        '7 - Caminhar com auxílio (2+ pessoas)',
+        '8 - Caminhar com auxílio (1 pessoa)',
+        '9 - Caminhar com andador',
+        '10 - Caminhar independente'
+      ]},
       { type:'number', id:'spo2Fisio', label:'SpO2 (%)', placeholder:'0-100', min:0, max:100 },
       { type:'select', id:'viaAerea', label:'Via Aérea Artificial', options:['','Sem via aérea artificial','TOT (Tubo Orotraqueal)','TQT (Traqueostomia)','Máscara Laríngea'] },
       { type:'text', id:'paramVentObs', label:'Observações VM', placeholder:'Ex: Vt 450, Tin 0.9, sensibilidade...' }
