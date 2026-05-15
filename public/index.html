@@ -1916,15 +1916,22 @@ function generatePHReport() {
   }).join('');
 
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório PH - ${targetDateStr}</title>
-    <style>body{font-family:Arial,sans-serif;padding:20px;color:#333}
-    h1{color:#d32f2f;font-size:22px;border-bottom:2px solid #d32f2f;padding-bottom:10px}
-    table{width:100%;border-collapse:collapse;font-size:12px;margin-top:20px}
-    th{background:#f5f5f5;padding:10px;text-align:left;border:1px solid #ddd}
-    td{padding:8px;border:1px solid #ddd;vertical-align:top}
+    <style>
+    @media print{body{margin:0;padding:10px}table{page-break-inside:auto}tr{page-break-inside:avoid;border-bottom:1px solid #ddd}thead{display:table-header-group}}
+    body{font-family:Arial,sans-serif;padding:20px;color:#333}
+    h1{color:#d32f2f;font-size:22px;border-bottom:2px solid #d32f2f;padding-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+    h1 small{font-size:12px;color:#666;font-weight:normal}
+    table{width:100%;border-collapse:collapse;font-size:11px;margin-top:20px}
+    th{background:#f5f5f5;padding:10px;text-align:left;border:1px solid #ddd;font-weight:bold;text-transform:uppercase}
+    td{padding:8px;border:1px solid #ddd;vertical-align:top;line-height:1.4}
+    .badge-ph{background:#ffebee;color:#d32f2f;padding:2px 6px;border-radius:4px;font-weight:bold;font-size:10px}
     </style></head><body>
-    <h1>🚨 Relatório de Intercorrências - PH (${targetDateStr})</h1>
+    <h1>
+      <span>🚨 Relatório de Intercorrências - PH</span>
+      <small>Data: ${targetDateStr} | Gerado em: ${new Date().toLocaleTimeString('pt-BR')}</small>
+    </h1>
     <table>
-      <thead><tr><th>Horário</th><th>Paciente</th><th>Caso</th><th>Acionamento</th><th>Motivo</th><th>Avaliação</th><th>Conduta</th><th>Fisioterapeuta</th></tr></thead>
+      <thead><tr><th style="width:8%">Horário</th><th style="width:15%">Paciente</th><th style="width:12%">Caso</th><th style="width:12%">Acionamento</th><th style="width:12%">Motivo</th><th style="width:15%">Avaliação</th><th style="width:15%">Conduta</th><th style="width:11%">Profissional</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     <script>window.onload=function(){window.print();}<\/script>
