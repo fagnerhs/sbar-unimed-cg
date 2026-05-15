@@ -588,15 +588,17 @@ const PROF_CONFIG = {
       { type:'text', id:'ventObsPed', label:'Observações Ventilação', placeholder:'Ex: nº TOT, fixação, aspiração...' },
       { type:'multi_device', id:'acessosVenososPed', label:'Acessos Venosos', deviceOptions:['Periférico','PICC','Cateter Umbilical','Central','Port-a-Cath'], fields:['local','observacao'] },
       { type:'text', id:'infusoesPed', label:'Infusões/Drogas em curso', placeholder:'Medicações em BIC, NPT, soroterapia...' },
-      { type:'multi_device', id:'sondasDrenosPed', label:'Sondas e Drenos', deviceOptions:['SOG (Sonda Orogástrica)','SNG (Sonda Nasogástrica)','SNE (Sonda Nasoenteral)','SVD (Sonda Vesical de Demora)','Dreno de Tórax','Dreno Abdominal','Gastrostomia','Jejunostomia'], fields:['local','observacao'] },
+      { type:'multi_device', id:'sondasDrenosPed', label:'Sondas, Drenos e Estomias', deviceOptions:['SOG (Sonda Orogástrica)','SNG (Sonda Nasogástrica)','SNE (Sonda Nasoenteral)','SVD (Sonda Vesical de Demora)','Cistostomia','Gastrostomia','Jejunostomia','Colostomia','Ileostomia','Traqueostomia','Dreno (Descrever no campo Tipo)'], fields:['local','observacao'] },
+      { type:'select', id:'diuresePed', label:'Controle de Diurese', options:['','Presente','Ausente','Diminuída','Poliúria','Hematúria','Disúria'] },
+      { type:'select', id:'evacuacaoPed', label:'Controle de Evacuação', options:['','Presente','Ausente','Diarreica','Pastosa','Constipação','Melena'] },
       { type:'select', id:'alimentacaoPed', label:'Alimentação', options:['','Seio Materno','Fórmula','Mista','SOG/SNE','Dieta Zero','NPT'] },
       { type:'text', id:'pesoPed', label:'Peso (g/kg)', placeholder:'Ex: 1250g ou 3.2kg' },
       { type:'select', id:'incubadora', label:'Suporte Térmico', options:['','Incubadora','Berço Aquecido','Berço Comum','Canguru'] },
-      { type:'select', id:'tipoPrecaucaoPed', label:'Tipo de Precaução', options:['','Padrão','Contato','Gotículas','Aerossóis','Contato + Gotículas','Contato + Aerossóis','Protetor (Reverso)'] },
-      { type:'text', id:'precaucaoObsPed', label:'Observações da Precaução', placeholder:'Ex: motivo, microrganismo, data início...' },
-      { type:'select', id:'mudDecubitoHorarioPed', label:'Horário da Última Mudança de Decúbito', options:['','06:00','08:00','10:00','12:00','14:00','16:00','18:00','20:00','22:00','00:00','02:00','04:00'] },
-      { type:'select', id:'posicaoDecubitoPed', label:'Posição Atual do Decúbito', options:['','DD (Dorsal)','DLE (Lateral Esquerdo)','DLD (Lateral Direito)','DV (Ventral)','Prona','Ninho'] },
-      { type:'text', id:'proxMudDecubitoPed', label:'Próxima Mudança de Decúbito', placeholder:'Ex: 14:00 - DLE' }
+      { type:'select', id:'tipoPrecaucaoPed', label:'Tipo de Precaução/Isolamento', options:['','Padrão','Contato','Gotículas','Aerossóis','Contato + Gotículas','Contato + Aerossóis','Protetor (Reverso)'] },
+      { type:'text', id:'precaucaoObsPed', label:'Motivo do Isolamento / Observações', placeholder:'Ex: KPC, MRSA, Meningite...' },
+      { type:'select', id:'posicaoDecubitoPed', label:'Posição Atual do Paciente', options:['','DD (Dorsal)','DLE (Lateral Esquerdo)','DLD (Lateral Direito)','DV (Ventral)','Prona','Ninho','Fowler','Semi-Fowler','Sentado'] },
+      { type:'text', id:'cronogramaDecubitoPed', label:'Cronograma de Mudança de Decúbito (Próximos Horários)', placeholder:'Ex: 10h: DLD, 12h: DD, 14h: DLE...' },
+      { type:'text', id:'alertasPendenciasPed', label:'⚠️ ALERTAS / PENDÊNCIAS (Cirurgias, Exames, Labs)', placeholder:'Ex: Programação cirúrgica 14h, TC de crânio pendente...' }
     ],
     conducts: [
       { id:'curativosPed', label:'Curativos/Coto Umbilical' },
@@ -1408,7 +1410,7 @@ function renderSbarRecords(records){
     const conducts=r.sbar.a.conducts||{};
     const conductLabels=cfg.conducts?Object.fromEntries(cfg.conducts.map(c=>[c.id,c.label])):{desmame:'Desmame',vni:'VNI',progressao:'Prog. Motora',tmi:'TMI',eletro:'Eletroestim.'};
     const conductStr=Object.entries(conducts).map(([k,v])=>`${conductLabels[k]||k}: ${v}`).join(' | ');
-    const alertas = r.sbar.a.fields?.alertasPendencias?.value || '';
+    const alertas = r.sbar.a.fields?.alertasPendencias?.value || r.sbar.a.fields?.alertasPendenciasPed?.value || '';
     return `<div class="history-item" style="border-left:4px solid ${cfg.color||'#666'}">
       <div class="history-meta">📅 ${ds} • ${cfg.icon||'👤'} ${r.profName||r.fisioName||''} (${prof}) • ${r.profEmail||r.fisioEmail||''}${r.sector?' • 🏥 '+r.sector:''}</div>
       ${alertas ? `<div style="background:#fff3e0; border:1px solid #ffe0b2; border-radius:8px; padding:10px; margin:10px 0; color:#e65100; font-weight:700; font-size:13px;">⚠️ ALERTA: ${alertas}</div>` : ''}
