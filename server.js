@@ -5,7 +5,7 @@ const path = require('path');
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DATA_DIR = path.join(__dirname, 'data');
-const MONGO_URI = 'mongodb+srv://fagnersato_db_user:pfCnUFa75WxpALCK@cluster0.7y9dyzb.mongodb.net/sbar_unimed_cg?retryWrites=true&w=majority';
+const MONGO_URI = process.env.MONGO_URI;
 const DB_NAME = 'sbar_unimed_cg';
 
 // Ensure data directory exists for JSON fallback
