@@ -224,7 +224,7 @@
     <div class="dashboard">
       <h3 style="font-size:18px;margin-bottom:16px;color:var(--primary);">⚙️ Painel Administrativo</h3>
       <div class="admin-stats" id="adminStats"></div>
-      <div style="margin-bottom:20px; display:flex; flex-direction:column; gap:10px; background:#fff; padding:15px; border-radius:12px; border:1px solid #eee;">
+      <div id="phReportSection" style="margin-bottom:20px; display:none; flex-direction:column; gap:10px; background:#fff; padding:15px; border-radius:12px; border:1px solid #eee;">
         <label style="font-size:13px; font-weight:700; color:#d32f2f;">📊 Relatório de Intercorrências (PH)</label>
         <div style="display:flex; gap:10px;">
           <input type="date" id="phReportDate" class="form-input" style="flex:1;">
@@ -1023,6 +1023,12 @@ function showDashboard() {
   const showAdminTab = isAdmin || currentUser.role === 'delegated_admin';
   document.getElementById('navAdmin').style.display = showAdminTab ? '' : 'none';
   if (showAdminTab) {
+    // PH Report access: Primary Admin OR (Fisio AND Admin/Delegated)
+    const isPrimaryAdmin = currentUser.id === 'admin_001';
+    const isFisioAdmin = currentUser.profissao === 'Fisioterapia' && (currentUser.role === 'admin' || currentUser.role === 'delegated_admin');
+    const phSection = document.getElementById('phReportSection');
+    if (phSection) phSection.style.display = (isPrimaryAdmin || isFisioAdmin) ? 'flex' : 'none';
+
     // Set default date for PH report to today
     const today = new Date().toISOString().split('T')[0];
     const dateInput = document.getElementById('phReportDate');
