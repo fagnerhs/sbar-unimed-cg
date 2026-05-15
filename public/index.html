@@ -534,11 +534,14 @@ const PROF_CONFIG = {
       { type:'text', id:'ventObsEnf', label:'Observações Ventilação', placeholder:'Ex: aspiração TOT, pressão cuff...' },
       { type:'multi_device', id:'acessosVenosos', label:'Acessos Venosos', deviceOptions:['Periférico','Central','PICC','Flebotomia','Port-a-Cath'], fields:['local','observacao'] },
       { type:'text', id:'infusoes', label:'Infusões/Drogas em curso', placeholder:'Medicações em BIC, soroterapia...' },
-      { type:'multi_device', id:'sondasDrenos', label:'Sondas e Drenos', deviceOptions:['SVD (Sonda Vesical de Demora)','SNG (Sonda Nasogástrica)','SNE (Sonda Nasoenteral)','Dreno de Tórax','Dreno Abdominal','Dreno de Jackson-Pratt','Dreno de Penrose','Cistostomia','Gastrostomia','Traqueostomia'], fields:['local','observacao'] },
+      { type:'multi_device', id:'sondasDrenos', label:'Sondas, Drenos e Estomias', deviceOptions:['SVD (Sonda Vesical de Demora)','SNG (Sonda Nasogástrica)','SNE (Sonda Nasoenteral)','Cistostomia','Gastrostomia','Jejunostomia','Colostomia','Ileostomia','Traqueostomia','Dreno (Descrever no campo Tipo)'], fields:['local','observacao'] },
+      { type:'select', id:'diurese', label:'Controle de Diurese', options:['','Presente','Ausente','Diminuída','Poliúria','Hematúria','Disúria'] },
+      { type:'select', id:'evacuacao', label:'Controle de Evacuação', options:['','Presente','Ausente','Diarreica','Pastosa','Constipação','Melena'] },
       { type:'select', id:'tipoPrecaucao', label:'Tipo de Precaução/Isolamento', options:['','Padrão','Contato','Gotículas','Aerossóis','Contato + Gotículas','Contato + Aerossóis','Protetor (Reverso)'] },
       { type:'text', id:'precaucaoObs', label:'Motivo do Isolamento / Observações', placeholder:'Ex: KPC, MRSA, Meningite...' },
       { type:'select', id:'posicaoDecubito', label:'Posição Atual do Paciente', options:['','DD (Dorsal)','DLE (Lateral Esquerdo)','DLD (Lateral Direito)','DV (Ventral)','Fowler','Semi-Fowler','Sentado'] },
-      { type:'text', id:'cronogramaDecubito', label:'Cronograma de Mudança de Decúbito (Próximos Horários)', placeholder:'Ex: 10h: DLD, 12h: DD, 14h: DLE...' }
+      { type:'text', id:'cronogramaDecubito', label:'Cronograma de Mudança de Decúbito (Próximos Horários)', placeholder:'Ex: 10h: DLD, 12h: DD, 14h: DLE...' },
+      { type:'text', id:'alertasPendencias', label:'⚠️ ALERTAS / PENDÊNCIAS (Cirurgias, Exames, Labs)', placeholder:'Ex: Programação cirúrgica 14h, TC de crânio pendente...' }
     ],
     conducts: [
       { id:'curativos', label:'Curativos' },
@@ -1162,7 +1165,14 @@ function addDeviceItem(fieldId, encodedOptions) {
       <span class="device-item-title">Item ${idx+1}</span>
       <button type="button" class="device-remove-btn" onclick="this.closest('.device-item').remove()">&times;</button>
     </div>
-    <div class="form-group"><label>Tipo</label><select class="form-select device-type">${options.map(o=>`<option value="${o}">${o}</option>`).join('')}</select></div>
+    <div class="form-group"><label>Tipo (Selecione ou descreva)</label>
+      <div style="display:flex;gap:8px;">
+        <select class="form-select device-type" style="flex:1;" onchange="if(this.value==='Dreno (Descrever no campo Tipo)') { this.style.display='none'; this.nextElementSibling.style.display='block'; this.nextElementSibling.focus(); }">
+          ${options.map(o=>`<option value="${o}">${o}</option>`).join('')}
+        </select>
+        <input type="text" class="form-input device-type-manual" style="display:none;flex:1;" placeholder="Descreva o dreno/dispositivo..." onblur="if(!this.value) { this.style.display='none'; this.previousElementSibling.style.display='block'; }">
+      </div>
+    </div>
     <div class="form-group"><label>Data de Inserção</label><input type="date" class="form-input device-date"></div>
     <div class="form-group"><label>Local/Posição</label><input type="text" class="form-input device-local" placeholder="Ex: MSE, jugular D, flanco D..."></div>
     <div class="form-group"><label>Observações</label><input type="text" class="form-input device-obs" placeholder="Ex: débito, aspecto, fixação..."></div>
@@ -1179,8 +1189,14 @@ function getMultiDeviceData(fieldId) {
   if (!container) return [];
   const items = [];
   container.querySelectorAll('.device-item').forEach(div => {
+    const selectEl = div.querySelector('.device-type');
+    const manualEl = div.querySelector('.device-type-manual');
+    let tipoVal = selectEl?.value || '';
+    if (manualEl && manualEl.style.display !== 'none' && manualEl.value) {
+      tipoVal = manualEl.value;
+    }
     items.push({
-      tipo: div.querySelector('.device-type')?.value || '',
+      tipo: tipoVal,
       data: div.querySelector('.device-date')?.value || '',
       local: div.querySelector('.device-local')?.value || '',
       obs: div.querySelector('.device-obs')?.value || ''
@@ -1333,8 +1349,10 @@ function renderSbarRecords(records){
     const conducts=r.sbar.a.conducts||{};
     const conductLabels=cfg.conducts?Object.fromEntries(cfg.conducts.map(c=>[c.id,c.label])):{desmame:'Desmame',vni:'VNI',progressao:'Prog. Motora',tmi:'TMI',eletro:'Eletroestim.'};
     const conductStr=Object.entries(conducts).map(([k,v])=>`${conductLabels[k]||k}: ${v}`).join(' | ');
+    const alertas = r.sbar.a.fields?.alertasPendencias?.value || '';
     return `<div class="history-item" style="border-left:4px solid ${cfg.color||'#666'}">
       <div class="history-meta">📅 ${ds} • ${cfg.icon||'👤'} ${r.profName||r.fisioName||''} (${prof}) • ${r.profEmail||r.fisioEmail||''}${r.sector?' • 🏥 '+r.sector:''}</div>
+      ${alertas ? `<div style="background:#fff3e0; border:1px solid #ffe0b2; border-radius:8px; padding:10px; margin:10px 0; color:#e65100; font-weight:700; font-size:13px;">⚠️ ALERTA: ${alertas}</div>` : ''}
       <div class="history-section"><strong>S - Situação:</strong><p>${r.sbar.s}</p></div>
       <div class="history-section"><strong>B - Background (Histórico Clínico):</strong><p>${r.sbar.b||'—'}</p></div>
       <div class="history-section"><strong>A - Avaliação (${prof}):</strong><p>${assessHtml||'—'}</p><p style="font-size:12px;color:var(--text-light);margin-top:4px;">${conductStr}</p></div>
