@@ -116,12 +116,17 @@ async function initStorage() {
       console.log(`Using MongoDB Atlas for data storage with URI: ${MONGO_URI}`);
       return;
     } catch (e) {
-      console.error("Fatal error: MongoDB connection failed. Exiting.", e.message);
-      process.exit(1); // Exit if MongoDB connection fails
+      console.error("MongoDB connection failed:", e.message);
+      console.log("Falling back to JSON file storage...");
+      jsonStorage.init();
+      storage = jsonStorage;
+      console.log("Using JSON file storage (MongoDB connection failed).");
     }
   } else {
-    console.error("Fatal error: MONGO_URI not set. Exiting.");
-    process.exit(1); // Exit if MONGO_URI is not set
+    console.log("No MONGO_URI set. Falling back to JSON file storage...");
+    jsonStorage.init();
+    storage = jsonStorage;
+    console.log("Using JSON file storage (MONGO_URI not set).");
   }
 }
 
@@ -143,6 +148,8 @@ const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.writeHead(200); res.end(); return; }
+
+
 
   if (req.url.startsWith('/api/')) {
     res.setHeader('Content-Type', 'application/json');
