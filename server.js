@@ -5,7 +5,7 @@ const path = require('path');
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DATA_DIR = path.join(__dirname, 'data');
-const MONGO_URI = process.env.MONGO_URI;
+const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://fagnersato_db_user:pfCnUFa75WxpALCK@cluster0.7y9dyzb.mongodb.net/sbar_unimed_cg?retryWrites=true&w=majority';
 const DB_NAME = 'sbar_unimed_cg';
 
 // Ensure data directory exists for JSON fallback
@@ -231,6 +231,12 @@ const server = http.createServer(async (req, res) => {
         const body = await parseBody(req); body.id = Date.now().toString();
         const r = await storage.addSbar(body);
         res.writeHead(201); res.end(JSON.stringify(r)); return;
+      }
+
+      // TEMPORARY DEBUG ENDPOINT
+      if (req.url === '/api/debug-mongo-uri' && req.method === 'GET') {
+        res.writeHead(200); res.end(JSON.stringify({ MONGO_URI: process.env.MONGO_URI })); return;
+      }
       }
 
       // DELETE /api/sbar/:id
