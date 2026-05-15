@@ -161,7 +161,9 @@ const server = http.createServer(async (req, res) => {
         if (!user) { res.writeHead(401); res.end(JSON.stringify({ error: 'E-mail ou senha incorretos' })); return; }
         if (user.status === 'pending') { res.writeHead(403); res.end(JSON.stringify({ error: 'Seu cadastro aguarda aprovação do administrador' })); return; }
         if (user.status === 'inactive') { res.writeHead(403); res.end(JSON.stringify({ error: 'Seu acesso foi desativado. Contate o administrador.' })); return; }
-        res.writeHead(200); res.end(JSON.stringify(user)); return;
+        const userResponse = { ...user };
+        delete userResponse.password;
+        res.writeHead(200); res.end(JSON.stringify(userResponse)); return;
       }
 
       // GET /api/users
