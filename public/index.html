@@ -1312,6 +1312,13 @@ function openSbarForm() {
   document.getElementById('sbarR').value = '';
   buildAssessmentForm();
 
+  // Hide SBAR steps for PH
+  document.getElementById('sbarStepper').style.display = isPH ? 'none' : 'flex';
+  if (isPH) {
+    currentStep = 2; // Go directly to Assessment (which contains PH fields)
+    updateStepper();
+  }
+
   // --- AUTO-FILL LOGIC ---
   const allRecords = DB.getSBAR().filter(r => r.patientId === selectedPatient.id);
   
@@ -1361,14 +1368,30 @@ function openSbarForm() {
 function closeSbarForm() { document.getElementById('sbarFormScreen').classList.remove('active'); }
 
 function updateStepper() {
+  const isPH = getActiveProfKey() === 'Fisioterapia_PH';
   document.querySelectorAll('.step-item').forEach((item,i)=>{ item.classList.remove('active','done'); if(i===currentStep)item.classList.add('active'); if(i<currentStep)item.classList.add('done'); });
   document.querySelectorAll('.step-panel').forEach((p,i)=>{ p.classList.toggle('active',i===currentStep); });
-  document.getElementById('prevBtn').style.display = currentStep===0?'none':'';
-  document.getElementById('nextBtn').textContent = currentStep===3?'Salvar Passagem':'Próximo';
-  if(currentStep===3){document.getElementById('nextBtn').classList.remove('btn-primary');document.getElementById('nextBtn').classList.add('btn-success');}
-  else{document.getElementById('nextBtn').classList.add('btn-primary');document.getElementById('nextBtn').classList.remove('btn-success');}
+  
+  if (isPH) {
+    document.getElementById('prevBtn').style.display = 'none';
+    document.getElementById('nextBtn').textContent = 'Salvar Chamado';
+    document.getElementById('nextBtn').classList.remove('btn-primary');
+    document.getElementById('nextBtn').classList.add('btn-success');
+  } else {
+    document.getElementById('prevBtn').style.display = currentStep===0?'none':'';
+    document.getElementById('nextBtn').textContent = currentStep===3?'Salvar Passagem':'Próximo';
+    if(currentStep===3){document.getElementById('nextBtn').classList.remove('btn-primary');document.getElementById('nextBtn').classList.add('btn-success');}
+    else{document.getElementById('nextBtn').classList.add('btn-primary');document.getElementById('nextBtn').classList.remove('btn-success');}
+  }
 }
-function nextStep(){ if(currentStep<3){currentStep++;if(currentStep===3)generateRecommendation();updateStepper();}else{saveSBAR();} }
+function nextStep(){ 
+  const isPH = getActiveProfKey() === 'Fisioterapia_PH';
+  if (isPH) {
+    saveSBAR();
+    return;
+  }
+  if(currentStep<3){currentStep++;if(currentStep===3)generateRecommendation();updateStepper();}else{saveSBAR();} 
+}
 function prevStep(){ if(currentStep>0){currentStep--;updateStepper();} }
 
 function selectConduct(btn){ const g=btn.parentElement; g.querySelectorAll('.conduct-btn').forEach(b=>b.classList.remove('selected')); btn.classList.add('selected'); }
@@ -1458,8 +1481,9 @@ function generateRecommendation(){
 let _savingInProgress = false;
 async function saveSBAR(){
   if(_savingInProgress){return;}
+  const isPH = getActiveProfKey() === 'Fisioterapia_PH';
   const s=document.getElementById('sbarS').value.trim();
-  if(!s){showToast('Preencha o campo Situação (S)');currentStep=0;updateStepper();return;}
+  if(!isPH && !s){showToast('Preencha o campo Situação (S)');currentStep=0;updateStepper();return;}
   _savingInProgress = true;
   document.getElementById('nextBtn').disabled = true;
   document.getElementById('nextBtn').textContent = 'Salvando...';
