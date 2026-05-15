@@ -1708,7 +1708,7 @@ function renderAdminPanel() {
   const phSection = document.getElementById('phReportSection');
   if (phSection) {
     const isPrimaryAdmin = currentUser.id === 'admin_001';
-    const isPhysioAdmin = currentUser.role === 'delegated_admin' && currentUser.profissao === 'Fisioterapia';
+    const isPhysioAdmin = (currentUser.role === 'admin' || currentUser.role === 'delegated_admin') && currentUser.profissao === 'Fisioterapia';
     phSection.style.display = (isPrimaryAdmin || isPhysioAdmin) ? 'flex' : 'none';
   }
   
