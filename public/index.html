@@ -620,6 +620,9 @@ const PROF_CONFIG = {
     parentProf: 'Fisioterapia',
     isPH: true,
     assessFields: [
+      { type:'text', id:'phPaciente', label:'👤 Paciente', placeholder:'Nome ou Iniciais...' },
+      { type:'text', id:'phLeito', label:'🛏️ Leito', placeholder:'Ex: 101-A' },
+      { type:'select', id:'phSetor', label:'🏥 Setor', options:['','PA-Adulto','PA-PED','UTI 1','UTI 2','UCO','UTI Mista','1° Andar','3° Andar','4° Andar','5° Andar','6° Andar','7° Andar'] },
       { type:'text', id:'phHorario', label:'🕒 Horário', placeholder:'Ex: 14:30' },
       { type:'text', id:'phCaso', label:'📝 Caso', placeholder:'Descreva o caso...' },
       { type:'text', id:'phAcionamento', label:'📱 Acionamento', placeholder:'Quem acionou?' },
@@ -1060,6 +1063,9 @@ function toggleFisioProfile() {
 
 function renderSectorFilter() {
   const c = document.getElementById('sectorFilter');
+  const isPH = getActiveProfKey() === 'Fisioterapia_PH';
+  if (isPH) { c.innerHTML = ''; return; }
+  
   let h = '';
   // Build sector list with user's sector first
   const userSetor = currentUser ? currentUser.setor : '';
@@ -1076,9 +1082,23 @@ function renderSectorFilter() {
 function filterSector(s) { currentSector=s; renderSectorFilter(); renderPatients(); }
 
 function renderPatients() {
+  const c = document.getElementById('patientList');
+  const isPH = getActiveProfKey() === 'Fisioterapia_PH';
+  
+  if (isPH) {
+    c.innerHTML = `
+      <div class="empty-state" style="padding:40px 20px;">
+        <div class="icon" style="font-size:64px; margin-bottom:20px;">🚨</div>
+        <h3 style="color:var(--primary); margin-bottom:10px;">Módulo PH - Intercorrências</h3>
+        <p style="color:var(--text-light); margin-bottom:30px;">Neste perfil, você registra chamados diretamente sem precisar cadastrar pacientes.</p>
+        <button class="btn btn-primary" onclick="startPHSbar()" style="background:#d32f2f; padding:16px 32px; font-size:16px; width:auto;">📝 REGISTRAR NOVO CHAMADO</button>
+        <button class="btn btn-outline" onclick="openPHHistory()" style="margin-top:15px; width:auto; padding:12px 24px;">📖 Ver Meus Chamados de Hoje</button>
+      </div>`;
+    return;
+  }
+
   const patients = DB.getPatients().filter(p=>!p.discharged);
   const filtered = currentSector==='Todos' ? patients : patients.filter(p=>p.sector===currentSector);
-  const c = document.getElementById('patientList');
   if (!filtered.length) { c.innerHTML='<div class="empty-state"><div class="icon">📋</div><p>Nenhum paciente ativo neste setor.<br>Toque em + para adicionar.</p></div>'; return; }
   const isPrimaryAdmin = currentUser && currentUser.id === 'admin_001';
   c.innerHTML = filtered.map(p=>`
@@ -1233,6 +1253,14 @@ async function confirmReadmit(){
 
 // ============ SBAR ACTIONS ============
 function startSbar(id){ const pts=DB.getPatients(); selectedPatient=pts.find(p=>p.id===id); if(!selectedPatient)return; openSbarForm(); }
+function startPHSbar() {
+  selectedPatient = { id: 'PH_TEMP', name: 'Novo Chamado PH' };
+  openSbarForm();
+}
+function openPHHistory() {
+  selectedPatient = { id: 'PH_TEMP', name: 'Meus Chamados PH' };
+  openHistory();
+}
 function startHistory(id){ const pts=DB.getPatients(); selectedPatient=pts.find(p=>p.id===id); if(!selectedPatient)return; openHistory(); }
 
 // ============ DYNAMIC ASSESSMENT FORM ============
@@ -1275,7 +1303,8 @@ function openSbarForm() {
   document.getElementById('sbarFormScreen').classList.add('active');
   const profKey = getActiveProfKey();
   const cfg = PROF_CONFIG[profKey] || {};
-  document.getElementById('sbarFormTitle').textContent = `${cfg.icon||''} SBAR ${cfg.displayName||currentUser.profissao} - ${selectedPatient.name}`;
+  const isPH = cfg.isPH;
+  document.getElementById('sbarFormTitle').textContent = isPH ? `🚨 Chamado de Intercorrência PH` : `${cfg.icon||''} SBAR ${cfg.displayName||currentUser.profissao} - ${selectedPatient.name}`;
   
   // Reset fields
   document.getElementById('sbarS').value = '';
@@ -1436,6 +1465,8 @@ async function saveSBAR(){
   document.getElementById('nextBtn').textContent = 'Salvando...';
   const profKey = getActiveProfKey();
   const profDisplay = getActiveProfDisplay();
+  const assessment = getAssessFields();
+  const isPH = PROF_CONFIG[profKey]?.isPH;
   const record={
     patientId:selectedPatient.id,
     odId:currentUser.id,
@@ -1446,13 +1477,14 @@ async function saveSBAR(){
     profissaoDisplay: profDisplay,
     profKey: profKey,
     conselho:currentUser.conselho,
-    sector:selectedPatient.sector,
-    patientBed:selectedPatient.bed,
+    sector: isPH ? (assessment.phSetor?.value || currentUser.setor) : selectedPatient.sector,
+    patientBed: isPH ? (assessment.phLeito?.value || '—') : selectedPatient.bed,
+    phPaciente: isPH ? (assessment.phPaciente?.value || '—') : null,
     timestamp:new Date().toISOString(),
     sbar:{
       s:s,
       b:document.getElementById('sbarB').value.trim(),
-      a:{ fields:getAssessFields(), conducts:getConducts() },
+      a:{ fields:assessment, conducts:getConducts() },
       r:document.getElementById('sbarR').value.trim()
     }
   };
@@ -1467,7 +1499,22 @@ async function saveSBAR(){
 
 // ============ HISTORY (filtered by user's profession + sub-profile) ============
 function openHistory(){
-  const allRecords=DB.getSBAR().filter(r=>r.patientId===selectedPatient.id);
+  const allSbar = DB.getSBAR();
+  const isPH_Temp = selectedPatient.id === 'PH_TEMP';
+  
+  let allRecords;
+  if (isPH_Temp) {
+    // Show only PH records from current user today
+    const todayStr = new Date().toLocaleDateString('pt-BR');
+    allRecords = allSbar.filter(r => {
+      const cfg = PROF_CONFIG[r.profKey] || {};
+      const date = new Date(r.timestamp).toLocaleDateString('pt-BR');
+      return cfg.isPH && r.profName === currentUser.name && date === todayStr;
+    });
+  } else {
+    allRecords = allSbar.filter(r => r.patientId === selectedPatient.id);
+  }
+
   // Filter by current user's profession (each area sees only their own)
   let records;
   if (currentUser.role === 'admin') {
@@ -1561,6 +1608,9 @@ function renderSbarRecords(records){
       const f = r.sbar.a.fields || {};
       return `<div class="history-item" style="border-left:4px solid ${cfg.color||'#666'}; background:#fff5f5;">
         <div class="history-meta">📅 ${ds} • 🚨 CHAMADO DE INTERCORRÊNCIA • ${r.profName}</div>
+        <div style="background:#fff; padding:10px; border-radius:8px; margin:10px 0; border:1px solid #fee;">
+          <strong>👤 Paciente:</strong> ${r.phPaciente || '—'} | <strong>🛏️ Leito:</strong> ${r.patientBed || '—'} | <strong>🏥 Setor:</strong> ${r.sector || '—'}
+        </div>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
           <div class="history-section"><strong>🕒 Horário:</strong><p>${f.phHorario?.value||'—'}</p></div>
           <div class="history-section"><strong>📱 Acionamento:</strong><p>${f.phAcionamento?.value||'—'}</p></div>
