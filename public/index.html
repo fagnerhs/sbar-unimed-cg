@@ -509,10 +509,11 @@ const PROF_CONFIG = {
     autoRec(c){ let r=[];
       const numSessoes = document.getElementById('numSessoes')?.value;
       if(numSessoes) r.push(`Realizar ${numSessoes} de fisioterapia.`);
+      if(c.vni==='Iniciado' && c.progressao==='Iniciado') r.push('VNI facilitadora para exercícios.');
       if(c.desmame==='Iniciado') r.push('Manter protocolo de desmame conforme tolerância hemodinâmica.');
       if(c.desmame==='Pausado') r.push('Reavaliar critérios para retomada do desmame ventilatório.');
-      if(c.vni==='Iniciado') r.push('Monitorar adaptação à VNI e sinais de intolerância.');
-      if(c.progressao==='Iniciado') r.push('Dar continuidade à progressão motora conforme protocolo institucional.');
+      if(c.vni==='Iniciado' && c.progressao!=='Iniciado') r.push('Monitorar adaptação à VNI e sinais de intolerância.');
+      if(c.progressao==='Iniciado' && c.vni!=='Iniciado') r.push('Dar continuidade à progressão motora conforme protocolo institucional.');
       if(c.tmi==='Iniciado') r.push('Manter TMI com carga atual e reavaliar em 48h.');
       if(c.eletro==='Iniciado') r.push('Manter eletroestimulação conforme parâmetros estabelecidos.');
       return r;
