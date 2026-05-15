@@ -63,7 +63,8 @@ const jsonStorage = {
   async updatePatient(id, data) { const pts = this.readPatients(); const i = pts.findIndex(p => p.id === id); if (i === -1) return null; Object.assign(pts[i], data); this.writePatients(pts); return pts[i]; },
   async deletePatient(id) { let pts = this.readPatients(); pts = pts.filter(p => p.id !== id); this.writePatients(pts); },
   async getSbar() { return this.readSbar(); },
-  async addSbar(r) { const recs = this.readSbar(); recs.unshift(r); this.writeSbar(recs); return r; }
+  async addSbar(r) { const recs = this.readSbar(); recs.unshift(r); this.writeSbar(recs); return r; },
+  async deleteSbar(id) { let recs = this.readSbar(); recs = recs.filter(r => r.id !== id); this.writeSbar(recs); }
 };
 
 // --- MONGODB STORAGE ---
@@ -81,7 +82,8 @@ function createMongoStorage(db) {
     async updatePatient(id, data) { delete data._id; const r = await db.collection('patients').findOneAndUpdate({ id }, { $set: data }, { returnDocument: 'after' }); return r ? toFrontend(r) : null; },
     async deletePatient(id) { await db.collection('patients').deleteOne({ id }); },
     async getSbar() { return (await db.collection('sbar').find({}).sort({ timestamp: -1 }).toArray()).map(toFrontend); },
-    async addSbar(r) { await db.collection('sbar').insertOne(r); return toFrontend(r); }
+    async addSbar(r) { await db.collection("sbar").insertOne(r); return toFrontend(r); },
+    async deleteSbar(id) { await db.collection("sbar").deleteOne({ id }); }
   };
 }
 
@@ -229,6 +231,13 @@ const server = http.createServer(async (req, res) => {
         const body = await parseBody(req); body.id = Date.now().toString();
         const r = await storage.addSbar(body);
         res.writeHead(201); res.end(JSON.stringify(r)); return;
+      }
+
+      // DELETE /api/sbar/:id
+      if (req.url.match(/^\/api\/sbar\/[^/]+$/) && req.method === 'DELETE') {
+        const id = req.url.split('/').pop();
+        await storage.deleteSbar(id);
+        res.writeHead(200); res.end(JSON.stringify({ success: true })); return;
       }
 
       res.writeHead(404); res.end(JSON.stringify({ error: 'Rota não encontrada' }));

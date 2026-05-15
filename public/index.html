@@ -116,6 +116,10 @@
     .device-item .form-group label{font-size:12px;color:var(--text-light)}
     .device-item .form-input,.device-item .form-select{padding:10px 12px;font-size:14px}
   </style>
+  <style>
+    .footer-credits{text-align:center;font-size:12px;color:var(--text-light);margin-top:20px;}
+    .ph-delete-btn{background:none;border:none;color:var(--danger);font-size:18px;cursor:pointer;margin-left:auto;}
+  </style>
 </head>
 <body>
 
@@ -141,6 +145,7 @@
       </div>
       <button class="btn btn-primary" onclick="handleLogin()">Entrar</button>
       <div class="register-link">Não tem conta? <a onclick="showRegister()">Cadastre-se</a></div>
+      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato</div>
     </div>
     <div id="registerForm" style="display:none;">
       <div class="form-group">
@@ -189,6 +194,7 @@
       </div>
       <button class="btn btn-primary" onclick="handleRegister()">Cadastrar</button>
       <div class="register-link">Já tem conta? <a onclick="showLogin()">Fazer Login</a></div>
+      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato</div>
     </div>
   </div>
 </div>
@@ -232,6 +238,7 @@
           <input type="date" id="phReportDate" class="form-input" style="flex:1;">
           <button class="btn btn-primary" onclick="generatePHReport()" style="flex:1; background:#d32f2f; margin-top:0;">Gerar Relatório</button>
         </div>
+        <div id="phReportList" style="margin-top:15px;"></div>
       </div>
       <div class="search-bar"><span class="search-icon">🔍</span><input type="text" class="search-input" id="searchUsers" placeholder="Buscar por nome, e-mail ou profissão..." oninput="renderAdminUsers()"></div>
       <div id="adminUserList"></div>
@@ -244,8 +251,9 @@
     <button class="nav-item" id="navAdmin" onclick="switchTab('admin')" style="display:none;"><span class="nav-icon">⚙️</span>Admin</button>
     <button class="nav-item" id="navTodos" onclick="switchTab('todos')"><span class="nav-icon">📋</span>Todos</button>
   </div>
-  <button class="fab" onclick="showAddPatient()" title="Adicionar Paciente">+</button>
-</div>
+      <button class="fab" onclick="showAddPatient()" title="Adicionar Paciente">+</button>
+      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato</div>
+    </div>
 
 <!-- SBAR FORM SCREEN -->
 <div id="sbarFormScreen" class="form-screen">
@@ -1952,7 +1960,7 @@ function generatePHReport() {
       <div class="ph-card-header">
         <div class="sos-badge">SOS</div>
         <div class="ph-card-title">Chamado de Intercorrência</div>
-        <div class="sos-badge">SOS</div>
+        <button class="ph-delete-btn" onclick="deletePHReport(\'${r.id}\')">🗑️</button>
       </div>
       <table class="ph-table">
         <tr><td class="ph-label">🕒 Horário:</td><td class="ph-value">${f.phHorario?.value||'—'}</td></tr>
