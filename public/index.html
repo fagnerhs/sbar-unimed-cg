@@ -224,13 +224,7 @@
     <div class="dashboard">
       <h3 style="font-size:18px;margin-bottom:16px;color:var(--primary);">⚙️ Painel Administrativo</h3>
       <div class="admin-stats" id="adminStats"></div>
-      <div id="phReportSection" style="margin-bottom:20px; display:none; flex-direction:column; gap:10px; background:#fff; padding:15px; border-radius:12px; border:1px solid #eee;">
-        <label style="font-size:13px; font-weight:700; color:#d32f2f;">📊 Relatório de Intercorrências (PH)</label>
-        <div style="display:flex; gap:10px;">
-          <input type="date" id="phReportDate" class="form-input" style="flex:1;">
-          <button class="btn btn-primary" onclick="generatePHReport()" style="flex:1; background:#d32f2f; margin-top:0;">Gerar Relatório</button>
-        </div>
-      </div>
+
       <div class="admin-filter" id="adminFilter"></div>
       <div class="search-bar"><span class="search-icon">🔍</span><input type="text" class="search-input" id="searchUsers" placeholder="Buscar por nome, e-mail ou profissão..." oninput="renderAdminUsers()"></div>
       <div id="adminUserList"></div>
@@ -497,7 +491,7 @@ const PROF_CONFIG = {
   'Fisioterapia': {
     conselho: 'CREFITO', icon: '🫁', color: '#1565c0',
     hasSubProfile: true,
-    subProfiles: ['Adulto', 'Neonatal/Pediatria', 'PH'],
+    subProfiles: ['Adulto', 'Neonatal/Pediatria'],
     assessFields: [
       { type:'select', id:'modoVent', label:'Modo Ventilatório', options:['','Ar Ambiente','Cateter Nasal','CNAF','Máscara de Venturi','Máscara de Reservatório','Macro Nebulização','VNI','VMI'] },
       { type:'select', id:'padRespFisio', label:'Padrão Respiratório', options:['','Eupneico','Taquipneico','Bradipneico','Dispneico','Tiragem Intercostal','Tiragem de Fúrcula','Batimento de Asa de Nariz'] },
@@ -614,26 +608,7 @@ const PROF_CONFIG = {
       return r;
     }
   },
-  'Fisioterapia_PH': {
-    conselho: 'CREFITO', icon: '🚨', color: '#d32f2f',
-    displayName: 'Fisioterapia PH',
-    parentProf: 'Fisioterapia',
-    isPH: true,
-    assessFields: [
-      { type:'text', id:'phPaciente', label:'👤 Paciente', placeholder:'Nome ou Iniciais...' },
-      { type:'text', id:'phLeito', label:'🛏️ Leito', placeholder:'Ex: 101-A' },
-      { type:'select', id:'phSetor', label:'🏥 Setor', options:['','PA-Adulto','PA-PED','UTI 1','UTI 2','UCO','UTI Mista','1° Andar','3° Andar','4° Andar','5° Andar','6° Andar','7° Andar'] },
-      { type:'text', id:'phHorario', label:'🕒 Horário', placeholder:'Ex: 14:30' },
-      { type:'text', id:'phCaso', label:'📝 Caso', placeholder:'Descreva o caso...' },
-      { type:'text', id:'phAcionamento', label:'📱 Acionamento', placeholder:'Quem acionou?' },
-      { type:'text', id:'phMotivo', label:'❓ Motivo', placeholder:'Motivo do chamado...' },
-      { type:'text', id:'phAvaliacao', label:'📋 Avaliação', placeholder:'Avaliação realizada...' },
-      { type:'text', id:'phConduta', label:'🤝 Conduta', placeholder:'Conduta adotada...' }
-    ],
-    conducts: [],
-    conductTitle: 'Chamado de Intercorrência',
-    autoRec(){ return []; }
-  },
+
   'Enfermagem_NP': {
     conselho: 'COREN', icon: '👶', color: '#e91e63',
     displayName: 'Enfermagem Neonatal/Pediatria',
@@ -1314,17 +1289,26 @@ function openSbarForm() {
 
   // Hide SBAR steps for PH
   document.getElementById('sbarStepper').style.display = isPH ? 'none' : 'flex';
+  
+  // Hide/Show panels based on PH
+  const panels = document.querySelectorAll('.step-panel');
   if (isPH) {
-    currentStep = 2; // Go directly to Assessment (which contains PH fields)
-    // Hide S, B, R panels for PH
-    document.getElementById('step0').style.display = 'none';
-    document.getElementById('step1').style.display = 'none';
-    document.getElementById('step3').style.display = 'none';
+    currentStep = 2;
+    panels.forEach((p, i) => {
+      if (i === 2) {
+        p.style.display = 'block';
+        p.classList.add('active');
+      } else {
+        p.style.display = 'none';
+        p.classList.remove('active');
+      }
+    });
     updateStepper();
   } else {
-    document.getElementById('step0').style.display = '';
-    document.getElementById('step1').style.display = '';
-    document.getElementById('step3').style.display = '';
+    panels.forEach((p, i) => {
+      p.style.display = ''; // Reset to default
+      p.classList.toggle('active', i === 0);
+    });
   }
 
   // --- AUTO-FILL LOGIC ---
@@ -1376,11 +1360,13 @@ function openSbarForm() {
 function closeSbarForm() { document.getElementById('sbarFormScreen').classList.remove('active'); }
 
 function updateStepper() {
-  const isPH = getActiveProfKey() === 'Fisioterapia_PH';
+  const profKey = getActiveProfKey();
+  const cfg = PROF_CONFIG[profKey] || {};
+  const isPH = cfg.isPH;
+  
   document.querySelectorAll('.step-item').forEach((item,i)=>{ item.classList.remove('active','done'); if(i===currentStep)item.classList.add('active'); if(i<currentStep)item.classList.add('done'); });
   
   if (isPH) {
-    document.querySelectorAll('.step-panel').forEach((p,i)=>{ p.classList.toggle('active',i===2); });
     document.getElementById('prevBtn').style.display = 'none';
     document.getElementById('nextBtn').textContent = 'Salvar Chamado';
     document.getElementById('nextBtn').classList.remove('btn-primary');
