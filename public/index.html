@@ -480,9 +480,8 @@ const PROF_CONFIG = {
       { type:'select', id:'numSessoes', label:'Número de Sessões de Fisioterapia', options:['','1 sessão','2 sessões','3 sessões'] },
       { type:'number', id:'fio2', label:'FiO2 (%)', placeholder:'21-100', min:21, max:100 },
       { type:'number', id:'peep', label:'PEEP (cmH2O)', placeholder:'0-30', min:0, max:30 },
-      { type:'number', id:'pressaoSup', label:'Pressão de Suporte / P Insp (cmH2O)', placeholder:'0-40', min:0, max:40 },
-      { type:'number', id:'volCorr', label:'Volume Corrente (mL)', placeholder:'200-800', min:0, max:1500 },
-      { type:'number', id:'freqResp', label:'FR programada (irpm)', placeholder:'10-30', min:0, max:60 },
+      { type:'number', id:'freqResp', label:'FR (irpm)', placeholder:'10-30', min:0, max:60 },
+      { type:'number', id:'spo2Fisio', label:'SpO2 (%)', placeholder:'0-100', min:0, max:100 },
       { type:'select', id:'viaAerea', label:'Via Aérea Artificial', options:['','Sem via aérea artificial','TOT (Tubo Orotraqueal)','TQT (Traqueostomia)','Máscara Laríngea'] },
       { type:'text', id:'paramVentObs', label:'Observações VM', placeholder:'Ex: Vt 450, Tin 0.9, sensibilidade...' }
     ],
@@ -495,6 +494,8 @@ const PROF_CONFIG = {
     ],
     conductTitle: 'Condutas Fisioterapêuticas',
     autoRec(c){ let r=[];
+      const numSessoes = document.getElementById('numSessoes')?.value;
+      if(numSessoes) r.push(`Realizar ${numSessoes} de fisioterapia.`);
       if(c.desmame==='Iniciado') r.push('Manter protocolo de desmame conforme tolerância hemodinâmica.');
       if(c.desmame==='Pausado') r.push('Reavaliar critérios para retomada do desmame ventilatório.');
       if(c.vni==='Iniciado') r.push('Monitorar adaptação à VNI e sinais de intolerância.');
@@ -891,7 +892,7 @@ function toggleEnfProfile() {
 
 function renderSectorFilter() {
   const c = document.getElementById('sectorFilter');
-  let h = `<div class="sector-chip ${currentSector==='Todos'?'active':''}" onclick="filterSector('Todos')">Todos</div>`;
+  let h = '';
   // Build sector list with user's sector first
   const userSetor = currentUser ? currentUser.setor : '';
   let allSectors = [];
@@ -901,6 +902,7 @@ function renderSectorFilter() {
     allSectors = [userSetor, ...allSectors.filter(s => s !== userSetor)];
   }
   allSectors.forEach(s => { h += `<div class="sector-chip ${currentSector===s?'active':''}" onclick="filterSector('${s}')">${s}</div>`; });
+  h += `<div class="sector-chip ${currentSector==='Todos'?'active':''}" onclick="filterSector('Todos')">Todos</div>`;
   c.innerHTML = h;
 }
 function filterSector(s) { currentSector=s; renderSectorFilter(); renderPatients(); }
