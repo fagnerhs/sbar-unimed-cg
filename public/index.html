@@ -858,6 +858,20 @@ async function handleLogin() {
   }
 }
 
+function validatePassword(pw) {
+  const minLength = 8;
+  const hasUpper = /[A-Z]/.test(pw);
+  const hasLower = /[a-z]/.test(pw);
+  const hasNum = /[0-9]/.test(pw);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(pw);
+  if (pw.length < minLength) return "A senha deve ter pelo menos 8 caracteres.";
+  if (!hasUpper) return "A senha deve conter pelo menos uma letra maiúscula.";
+  if (!hasLower) return "A senha deve conter pelo menos uma letra minúscula.";
+  if (!hasNum) return "A senha deve conter pelo menos um número.";
+  if (!hasSpecial) return "A senha deve conter pelo menos um caractere especial (ex: @, #, $, %).";
+  return null;
+}
+
 async function handleRegister() {
   const name = document.getElementById('regName').value.trim();
   const email = document.getElementById('regEmail').value.trim();
@@ -867,7 +881,8 @@ async function handleRegister() {
   const setor = document.getElementById('regSetor').value;
   if (!name||!email||!password||!profissao||!conselho||!setor) { showToast('Preencha todos os campos'); return; }
   if (!email.endsWith('@unimedcg.coop.br')) { showToast('Apenas e-mails @unimedcg.coop.br são permitidos'); return; }
-  if (password.length < 6) { showToast('Senha deve ter no mínimo 6 caracteres'); return; }
+  const pwError = validatePassword(password);
+  if (pwError) { showToast(pwError); return; }
   try {
     await DB.apiRegister({ name, email, password, profissao, conselho, setor });
     showToast('Cadastro enviado! Aguarde aprovação do administrador.');
@@ -1593,7 +1608,8 @@ async function confirmSelfChangePass() {
   const confirm = document.getElementById('selfConfirmPass').value;
   if (!current || !newPass || !confirm) { showToast('Preencha todos os campos'); return; }
   if (current !== currentUser.password) { showToast('Senha atual incorreta'); return; }
-  if (newPass.length < 6) { showToast('Nova senha deve ter no mínimo 6 caracteres'); return; }
+  const pwError = validatePassword(newPass);
+  if (pwError) { showToast(pwError); return; }
   if (newPass !== confirm) { showToast('As senhas não coincidem'); return; }
   await DB.apiUpdateUser(currentUser.id, { password: newPass });
   currentUser.password = newPass;
@@ -1626,7 +1642,8 @@ async function confirmChangePass() {
   const newPass = document.getElementById('newPassword').value;
   const confirmPass = document.getElementById('confirmPassword').value;
   if (!newPass || !confirmPass) { showToast('Preencha ambos os campos'); return; }
-  if (newPass.length < 6) { showToast('Senha deve ter no mínimo 6 caracteres'); return; }
+  const pwError = validatePassword(newPass);
+  if (pwError) { showToast(pwError); return; }
   if (newPass !== confirmPass) { showToast('As senhas não coincidem'); return; }
   await DB.apiUpdateUser(changePassTarget.id, { password: newPass });
   await DB.fetchUsers();
