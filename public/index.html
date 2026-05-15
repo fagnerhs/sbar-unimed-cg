@@ -1490,7 +1490,6 @@ async function saveSBAR(){
   const profKey = getActiveProfKey();
   const profDisplay = getActiveProfDisplay();
   const assessment = getAssessFields();
-  const isPH = PROF_CONFIG[profKey]?.isPH;
   const record={
     patientId:selectedPatient.id,
     odId:currentUser.id,
