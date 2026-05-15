@@ -193,8 +193,8 @@
         </select>
       </div>
       <button class="btn btn-primary" onclick="handleRegister()">Cadastrar</button>
-      <div class="register-link">Já tem conta? <a onclick="showLogin()">Fazer Login</a></div>
       <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato</div>
+      <div class="register-link">Já tem conta? <a onclick="showLogin()">Fazer Login</a></div>
     </div>
   </div>
 </div>
@@ -244,7 +244,8 @@
       <div id="adminUserList"></div>
     </div>
   </div>
-  <div class="bottom-nav">
+  <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato</div>
+    <div class="bottom-nav">
     <button class="nav-item active" id="navAtivos" onclick="switchTab('ativos')"><span class="nav-icon">🏥</span>Ativos</button>
     <button class="nav-item" id="navAdd" onclick="showAddPatient()"><span class="nav-icon">➕</span>Novo</button>
     <button class="nav-item" id="navPdf" onclick="generateSectorPDF()"><span class="nav-icon">📄</span>PDF</button>
@@ -1947,7 +1948,8 @@ function generatePHReport() {
     return cfg.isPH && date === targetDateStr;
   });
 
-  if (!phRecords.length) { showToast('Nenhum chamado PH registrado hoje.'); return; }
+  if (!phRecords.length) { document.getElementById("phReportList").innerHTML = 
+    `<div class="empty-state"><div class="icon">📄</div><p>Nenhum chamado PH registrado para ${targetDateStr}.</p></div>`; return; }
 
   let cards = phRecords.map(r => {
     const f = r.sbar.a.fields || {};
@@ -1976,34 +1978,21 @@ function generatePHReport() {
     </div>`;
   }).join('');
 
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório PH - ${targetDateStr}</title>
-    <style>
-    @media print{body{margin:0;padding:10px}.ph-card{page-break-inside:avoid;margin-bottom:30px;border:2px solid #000}}
-    body{font-family:Arial,sans-serif;padding:20px;color:#333;background:#f5f5f5}
-    .ph-card{background:#fff;border:1px solid #ccc;margin-bottom:20px;max-width:800px;margin-left:auto;margin-right:auto;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
-    .ph-card-header{background:#fff;padding:10px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #000}
-    .ph-card-title{font-weight:bold;font-size:18px;text-transform:uppercase}
-    .sos-badge{background:#d32f2f;color:#fff;padding:4px 12px;border-radius:4px;font-weight:bold;font-size:14px}
-    .ph-table{width:100%;border-collapse:collapse}
-    .ph-table td{padding:12px;border-bottom:1px solid #eee;font-size:14px}
-    .ph-table tr:last-child td{border-bottom:none}
-    .ph-label{width:30%;background:#f9f9f9;font-weight:bold;color:#555;border-right:1px solid #eee}
-    .ph-value{width:70%;color:#000}
-    .report-header{text-align:center;margin-bottom:30px}
-    .report-header h1{color:#d32f2f;margin-bottom:5px}
-    .report-header p{color:#666;font-size:14px}
-    </style></head><body>
-    <div class="report-header">
-      <h1>🚨 Relatório de Intercorrências - PH</h1>
-      <p>Data: ${targetDateStr} | Gerado em: ${new Date().toLocaleTimeString('pt-BR')}</p>
-    </div>
-    ${cards}
-    <script>window.onload=function(){window.print();}<\/script>
-  </body></html>`;
+  document.getElementById("phReportList").innerHTML = cards;
+  showToast(`Relatório PH gerado para ${targetDateStr}.`);
 
-  const w = window.open('', '_blank');
-  w.document.write(html);
-  w.document.close();
+async function deletePHReport(id) {
+  if (!confirm("Tem certeza que deseja excluir este relatório PH?")) return;
+  try {
+    await DB.apiDeleteSbar(id);
+    showToast("Relatório PH excluído com sucesso!");
+    // Refresh the data and the report
+    await DB.fetchSBAR();
+    generatePHReport(); 
+  } catch (e) {
+    showToast("Erro ao excluir relatório PH.");
+    console.error("Erro ao excluir relatório PH:", e);
+  }
 }
 
 function generateSectorPDF() {
