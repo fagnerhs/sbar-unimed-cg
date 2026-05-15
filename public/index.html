@@ -476,6 +476,7 @@ const PROF_CONFIG = {
     conselho: 'CREFITO', icon: '🫁', color: '#1565c0',
     assessFields: [
       { type:'select', id:'modoVent', label:'Modo Ventilatório', options:['','Ar Ambiente','Cateter Nasal','CNAF','Máscara de Venturi','Máscara de Reservatório','Macro Nebulização','VNI','VMI'] },
+      { type:'select', id:'padRespFisio', label:'Padrão Respiratório', options:['','Eupneico','Taquipneico','Bradipneico','Dispneico','Tiragem Intercostal','Tiragem de Fúrcula','Batimento de Asa de Nariz'] },
       { type:'select', id:'numSessoes', label:'Número de Sessões de Fisioterapia', options:['','1 sessão','2 sessões','3 sessões'] },
       { type:'number', id:'fio2', label:'FiO2 (%)', placeholder:'21-100', min:21, max:100 },
       { type:'number', id:'peep', label:'PEEP (cmH2O)', placeholder:'0-30', min:0, max:30 },
@@ -519,11 +520,10 @@ const PROF_CONFIG = {
       { type:'multi_device', id:'acessosVenosos', label:'Acessos Venosos', deviceOptions:['Periférico','Central','PICC','Flebotomia','Port-a-Cath'], fields:['local','observacao'] },
       { type:'text', id:'infusoes', label:'Infusões/Drogas em curso', placeholder:'Medicações em BIC, soroterapia...' },
       { type:'multi_device', id:'sondasDrenos', label:'Sondas e Drenos', deviceOptions:['SVD (Sonda Vesical de Demora)','SNG (Sonda Nasogástrica)','SNE (Sonda Nasoenteral)','Dreno de Tórax','Dreno Abdominal','Dreno de Jackson-Pratt','Dreno de Penrose','Cistostomia','Gastrostomia','Traqueostomia'], fields:['local','observacao'] },
-      { type:'select', id:'tipoPrecaucao', label:'Tipo de Precaução', options:['','Padrão','Contato','Gotículas','Aerossóis','Contato + Gotículas','Contato + Aerossóis','Protetor (Reverso)'] },
-      { type:'text', id:'precaucaoObs', label:'Observações da Precaução', placeholder:'Ex: motivo, microrganismo, data início...' },
-      { type:'select', id:'mudDecubitoHorario', label:'Horário da Última Mudança de Decúbito', options:['','06:00','08:00','10:00','12:00','14:00','16:00','18:00','20:00','22:00','00:00','02:00','04:00'] },
-      { type:'select', id:'posicaoDecubito', label:'Posição Atual do Decúbito', options:['','DD (Dorsal)','DLE (Lateral Esquerdo)','DLD (Lateral Direito)','DV (Ventral)','Fowler','Semi-Fowler'] },
-      { type:'text', id:'proxMudDecubito', label:'Próxima Mudança de Decúbito', placeholder:'Ex: 14:00 - DLE' }
+      { type:'select', id:'tipoPrecaucao', label:'Tipo de Precaução/Isolamento', options:['','Padrão','Contato','Gotículas','Aerossóis','Contato + Gotículas','Contato + Aerossóis','Protetor (Reverso)'] },
+      { type:'text', id:'precaucaoObs', label:'Motivo do Isolamento / Observações', placeholder:'Ex: KPC, MRSA, Meningite...' },
+      { type:'select', id:'posicaoDecubito', label:'Posição Atual do Paciente', options:['','DD (Dorsal)','DLE (Lateral Esquerdo)','DLD (Lateral Direito)','DV (Ventral)','Fowler','Semi-Fowler','Sentado'] },
+      { type:'text', id:'cronogramaDecubito', label:'Cronograma de Mudança de Decúbito (Próximos Horários)', placeholder:'Ex: 10h: DLD, 12h: DD, 14h: DLE...' }
     ],
     conducts: [
       { id:'curativos', label:'Curativos' },
@@ -1058,10 +1058,57 @@ function openSbarForm() {
   const profKey = getActiveProfKey();
   const cfg = PROF_CONFIG[profKey] || {};
   document.getElementById('sbarFormTitle').textContent = `${cfg.icon||''} SBAR ${cfg.displayName||currentUser.profissao} - ${selectedPatient.name}`;
+  
+  // Reset fields
   document.getElementById('sbarS').value = '';
   document.getElementById('sbarB').value = '';
   document.getElementById('sbarR').value = '';
   buildAssessmentForm();
+
+  // --- AUTO-FILL LOGIC ---
+  const allRecords = DB.getSBAR().filter(r => r.patientId === selectedPatient.id);
+  
+  // 1. Copy Situation and Background from previous SBAR of the SAME profession
+  const lastSameProf = allRecords.find(r => r.profKey === profKey);
+  if (lastSameProf) {
+    document.getElementById('sbarS').value = lastSameProf.sbar.s || '';
+    document.getElementById('sbarB').value = lastSameProf.sbar.b || '';
+    
+    // 2. Copy Devices (Nursing only)
+    if (currentUser.profissao === 'Enfermagem') {
+      const deviceFields = ['acessosVenosos', 'sondasDrenos', 'acessosVenososPed', 'sondasDrenosPed'];
+      deviceFields.forEach(fieldId => {
+        const fieldData = lastSameProf.sbar.a.fields[fieldId];
+        if (fieldData && fieldData.isMultiDevice && Array.isArray(fieldData.value)) {
+          const container = document.getElementById(fieldId + '_container');
+          if (container) {
+            container.innerHTML = ''; // Clear current
+            fieldData.value.forEach(item => {
+              const encodedOptions = encodeURIComponent(JSON.stringify(PROF_CONFIG[profKey].assessFields.find(f => f.id === fieldId).deviceOptions));
+              addDeviceItem(fieldId, encodedOptions);
+              const lastItem = container.lastElementChild;
+              if (lastItem) {
+                lastItem.querySelector('.device-type').value = item.tipo || '';
+                lastItem.querySelector('.device-date').value = item.data || '';
+                lastItem.querySelector('.device-local').value = item.local || '';
+                lastItem.querySelector('.device-obs').value = item.obs || '';
+              }
+            });
+          }
+        }
+      });
+    }
+  }
+
+  // 3. Lactário integration: Pull S and B from last Nutrição record
+  if (profKey === 'Lactário') {
+    const lastNutri = allRecords.find(r => r.profissao === 'Nutrição');
+    if (lastNutri) {
+      document.getElementById('sbarS').value = lastNutri.sbar.s || '';
+      document.getElementById('sbarB').value = lastNutri.sbar.b || '';
+    }
+  }
+
   updateStepper();
 }
 function closeSbarForm() { document.getElementById('sbarFormScreen').classList.remove('active'); }
