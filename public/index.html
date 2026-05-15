@@ -224,6 +224,9 @@
     <div class="dashboard">
       <h3 style="font-size:18px;margin-bottom:16px;color:var(--primary);">⚙️ Painel Administrativo</h3>
       <div class="admin-stats" id="adminStats"></div>
+      <div style="margin-bottom:20px; display:flex; gap:10px;">
+        <button class="btn btn-primary" onclick="generatePHReport()" style="flex:1; background:#d32f2f;">📊 Relatório Diário PH</button>
+      </div>
       <div class="admin-filter" id="adminFilter"></div>
       <div class="search-bar"><span class="search-icon">🔍</span><input type="text" class="search-input" id="searchUsers" placeholder="Buscar por nome, e-mail ou profissão..." oninput="renderAdminUsers()"></div>
       <div id="adminUserList"></div>
@@ -302,9 +305,9 @@
         </select>
       </div>
     </div>
-    <div class="form-group"><label>Leito</label><input type="text" id="patientBed" class="form-input" placeholder="Ex: UTI1-05"></div>
+    <div class="form-group"><label>Leito</label><input type="text" id="patientBed" class="form-input" placeholder="Ex: UTI1-05" list="bedOptions"><datalist id="bedOptions"></datalist></div>
     <div class="form-group"><label>Setor</label>
-      <select id="patientSector" class="form-select"><option value="">Selecione...</option>
+      <select id="patientSector" class="form-select" onchange="updatePatientBedOptions()"><option value="">Selecione...</option>
         <option>PA-Adulto</option><option>PA-PED</option><option>UTI 1</option><option>UTI 2</option><option>UCO</option><option>UTI Mista</option>
         <option>1° Andar</option><option>3° Andar</option><option>4° Andar</option><option>5° Andar</option><option>6° Andar</option><option>7° Andar</option>
       </select>
@@ -489,6 +492,8 @@ const DB = {
 const PROF_CONFIG = {
   'Fisioterapia': {
     conselho: 'CREFITO', icon: '🫁', color: '#1565c0',
+    hasSubProfile: true,
+    subProfiles: ['Adulto', 'Neonatal/Pediatria', 'PH'],
     assessFields: [
       { type:'select', id:'modoVent', label:'Modo Ventilatório', options:['','Ar Ambiente','Cateter Nasal','CNAF','Máscara de Venturi','Máscara de Reservatório','Macro Nebulização','VNI','VMI'] },
       { type:'select', id:'padRespFisio', label:'Padrão Respiratório', options:['','Eupneico','Taquipneico','Bradipneico','Dispneico','Tiragem Intercostal','Tiragem de Fúrcula','Batimento de Asa de Nariz'] },
@@ -572,6 +577,51 @@ const PROF_CONFIG = {
       if(c.isolamento==='Iniciado') r.push('Manter precauções de isolamento conforme CCIH e tipo de precaução indicado.');
       return r;
     }
+  },
+  'Fisioterapia_NP': {
+    conselho: 'CREFITO', icon: '👶', color: '#1565c0',
+    displayName: 'Fisioterapia Neonatal/Pediatria',
+    parentProf: 'Fisioterapia',
+    assessFields: [
+      { type:'select', id:'modoVentPedF', label:'Modo Ventilatório', options:['','Ar Ambiente','Cateter Nasal','CNAF','Máscara de Venturi','Máscara de Reservatório','Macro Nebulização','Hood/Capacete','CPAP Nasal','VNI','VMI','VAFO (Alta Frequência)'] },
+      { type:'select', id:'padRespPedF', label:'Padrão Respiratório', options:['','Eupneico','Taquipneico','Bradipneico','Dispneico','Tiragem Intercostal','Tiragem de Fúrcula','Batimento de Asa de Nariz','Apneia'] },
+      { type:'select', id:'numSessoesPedF', label:'Número de Sessões', options:['','1 sessão','2 sessões','3 sessões'] },
+      { type:'number', id:'fio2PedF', label:'FiO2 (%)', placeholder:'21-100', min:21, max:100 },
+      { type:'number', id:'freqRespPedF', label:'FR (irpm)', placeholder:'20-60', min:0, max:100 },
+      { type:'number', id:'spo2PedF', label:'SpO2 (%)', placeholder:'0-100', min:0, max:100 },
+      { type:'select', id:'viaAereaPedF', label:'Via Aérea Artificial', options:['','Sem via aérea artificial','TOT (Tubo Orotraqueal)','TQT (Traqueostomia)','Cânula Nasal'] },
+      { type:'text', id:'paramVentObsPedF', label:'Observações VM', placeholder:'Ex: nº TOT, fixação, aspiração...' }
+    ],
+    conducts: [
+      { id:'desmamePed', label:'Desmame Ventilatório' },
+      { id:'vniPed', label:'VNI' },
+      { id:'estimulacaoPed', label:'Estimulação Sensório-Motora' },
+      { id:'higieneBrf', label:'Higiene Brônquica' },
+      { id:'posicionamentoPed', label:'Posicionamento Terapêutico' }
+    ],
+    conductTitle: 'Condutas Fisioterapêuticas - Neo/Ped',
+    autoRec(c){ let r=[];
+      const numSessoes = document.getElementById('numSessoesPedF')?.value;
+      if(numSessoes) r.push(`Realizar ${numSessoes} de fisioterapia.`);
+      return r;
+    }
+  },
+  'Fisioterapia_PH': {
+    conselho: 'CREFITO', icon: '🚨', color: '#d32f2f',
+    displayName: 'Fisioterapia PH',
+    parentProf: 'Fisioterapia',
+    isPH: true,
+    assessFields: [
+      { type:'text', id:'phHorario', label:'🕒 Horário', placeholder:'Ex: 14:30' },
+      { type:'text', id:'phCaso', label:'📝 Caso', placeholder:'Descreva o caso...' },
+      { type:'text', id:'phAcionamento', label:'📱 Acionamento', placeholder:'Quem acionou?' },
+      { type:'text', id:'phMotivo', label:'❓ Motivo', placeholder:'Motivo do chamado...' },
+      { type:'text', id:'phAvaliacao', label:'📋 Avaliação', placeholder:'Avaliação realizada...' },
+      { type:'text', id:'phConduta', label:'🤝 Conduta', placeholder:'Conduta adotada...' }
+    ],
+    conducts: [],
+    conductTitle: 'Chamado de Intercorrência',
+    autoRec(){ return []; }
   },
   'Enfermagem_NP': {
     conselho: 'COREN', icon: '👶', color: '#e91e63',
@@ -789,13 +839,20 @@ let dischargeTarget = null;
 let selectedDischargeType = 'casa';
 let readmitTarget = null;
 let enfSubProfile = localStorage.getItem('sbar_enf_subprofile') || 'Adulto';
+let fisioSubProfile = localStorage.getItem('sbar_fisio_subprofile') || 'Adulto';
 
 // Get the active profession key (handles nursing sub-profiles)
 function getActiveProfKey() {
-  if (currentUser && currentUser.profissao === 'Enfermagem') {
+  if (!currentUser) return '';
+  if (currentUser.profissao === 'Enfermagem') {
     return enfSubProfile === 'Neonatal/Pediatria' ? 'Enfermagem_NP' : 'Enfermagem';
   }
-  return currentUser ? currentUser.profissao : '';
+  if (currentUser.profissao === 'Fisioterapia') {
+    if (fisioSubProfile === 'Neonatal/Pediatria') return 'Fisioterapia_NP';
+    if (fisioSubProfile === 'PH') return 'Fisioterapia_PH';
+    return 'Fisioterapia';
+  }
+  return currentUser.profissao;
 }
 
 function getActiveProfDisplay() {
@@ -836,6 +893,31 @@ function updateRegConselho() {
   const label = cfg ? cfg.conselho : 'Registro Profissional';
   document.getElementById('regConselhoLabel').textContent = label;
   document.getElementById('regConselho').placeholder = cfg ? `Nº do ${cfg.conselho}` : 'Nº do conselho';
+}
+
+function updatePatientBedOptions() {
+  const sector = document.getElementById('patientSector').value;
+  const bedInput = document.getElementById('patientBed');
+  const bedList = document.getElementById('bedOptions');
+  bedList.innerHTML = '';
+  
+  let options = [];
+  if (['UTI 1', 'UCO', 'UTI Mista'].includes(sector)) {
+    for (let i = 1; i <= 10; i++) options.push(i.toString().padStart(2, '0'));
+  } else if (sector === 'UTI 2') {
+    for (let i = 11; i <= 20; i++) options.push(i.toString());
+  }
+  
+  if (options.length > 0) {
+    options.forEach(opt => {
+      const el = document.createElement('option');
+      el.value = opt;
+      bedList.appendChild(el);
+    });
+    bedInput.setAttribute('list', 'bedOptions');
+  } else {
+    bedInput.removeAttribute('list');
+  }
 }
 
 // Admin is created on server side automatically
@@ -920,7 +1002,15 @@ function showDashboard() {
   const isAdmin = currentUser.role === 'admin';
   const isEnf = currentUser.profissao === 'Enfermagem';
   let displayText = isAdmin ? `⚙️ ${currentUser.name} • Administrador` : `${cfg.icon||''} ${currentUser.name} • ${getActiveProfDisplay()} • ${currentUser.conselho}`;
-  document.getElementById('userDisplay').innerHTML = displayText + (isEnf ? ` <button onclick="toggleEnfProfile()" style="background:rgba(255,255,255,0.25);border:none;color:#fff;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;margin-left:8px;cursor:pointer;">🔄 ${enfSubProfile==='Adulto'?'Trocar p/ PED':'Trocar p/ Adulto'}</button>` : '');
+  const isFisio = currentUser.profissao === 'Fisioterapia';
+  let toggleBtn = '';
+  if (isEnf) {
+    toggleBtn = ` <button onclick="toggleEnfProfile()" style="background:rgba(255,255,255,0.25);border:none;color:#fff;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;margin-left:8px;cursor:pointer;">🔄 ${enfSubProfile==='Adulto'?'Trocar p/ PED':'Trocar p/ Adulto'}</button>`;
+  } else if (isFisio) {
+    const next = fisioSubProfile === 'Adulto' ? 'Neonatal/Pediatria' : (fisioSubProfile === 'Neonatal/Pediatria' ? 'PH' : 'Adulto');
+    toggleBtn = ` <button onclick="toggleFisioProfile()" style="background:rgba(255,255,255,0.25);border:none;color:#fff;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;margin-left:8px;cursor:pointer;">🔄 Trocar p/ ${next}</button>`;
+  }
+  document.getElementById('userDisplay').innerHTML = displayText + toggleBtn;
   // Show/hide admin tab (visible for admin and delegated admins)
   const showAdminTab = isAdmin || currentUser.role === 'delegated_admin';
   document.getElementById('navAdmin').style.display = showAdminTab ? '' : 'none';
@@ -937,6 +1027,15 @@ function toggleEnfProfile() {
   localStorage.setItem('sbar_enf_subprofile', enfSubProfile);
   showDashboard();
   showToast(`Perfil alterado para: Enfermagem ${enfSubProfile}`);
+}
+
+function toggleFisioProfile() {
+  if (fisioSubProfile === 'Adulto') fisioSubProfile = 'Neonatal/Pediatria';
+  else if (fisioSubProfile === 'Neonatal/Pediatria') fisioSubProfile = 'PH';
+  else fisioSubProfile = 'Adulto';
+  localStorage.setItem('sbar_fisio_subprofile', fisioSubProfile);
+  showDashboard();
+  showToast(`Perfil alterado para: Fisioterapia ${fisioSubProfile}`);
 }
 
 function renderSectorFilter() {
@@ -1008,7 +1107,10 @@ function showAddPatient(){
   editingPatientId = null;
   document.getElementById('patientModalTitle').textContent = 'Novo Paciente';
   document.getElementById('addPatientModal').classList.add('active'); 
-  if(currentSector && currentSector!=='Todos'){document.getElementById('patientSector').value=currentSector;} 
+  if(currentSector && currentSector!=='Todos'){
+    document.getElementById('patientSector').value=currentSector;
+    updatePatientBedOptions();
+  } 
 }
 function editPatient(id) {
   const p = DB.getPatients().find(p => p.id === id);
@@ -1020,6 +1122,7 @@ function editPatient(id) {
   document.getElementById('patientGender').value = p.gender || '';
   document.getElementById('patientBed').value = p.bed;
   document.getElementById('patientSector').value = p.sector;
+  updatePatientBedOptions();
   document.getElementById('patientCritical').checked = p.critical || false;
   document.getElementById('addPatientModal').classList.add('active');
 }
@@ -1402,11 +1505,18 @@ function renderMultiContent(){
 
 // ============ SHARED SBAR RENDER ============
 function renderSbarRecords(records){
-  return records.map(r=>{
+  const isAdmin = currentUser.role === 'admin';
+  const isPH = getActiveProfKey() === 'Fisioterapia_PH';
+
+  return records.filter(r => {
+    const cfg = PROF_CONFIG[r.profKey] || PROF_CONFIG[r.profissao] || {};
+    if (cfg.isPH && !isAdmin && !isPH) return false;
+    return true;
+  }).map(r=>{
     const d=new Date(r.timestamp);
     const ds=d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
     const prof=r.profissao||'Fisioterapia';
-    const cfg=PROF_CONFIG[prof]||{};
+    const cfg=PROF_CONFIG[r.profKey] || PROF_CONFIG[prof] || {};
     let assessHtml='';
     if(r.sbar.a.fields){
       const parts=[];
@@ -1426,6 +1536,22 @@ function renderSbarRecords(records){
     const conductLabels=cfg.conducts?Object.fromEntries(cfg.conducts.map(c=>[c.id,c.label])):{desmame:'Desmame',vni:'VNI',progressao:'Prog. Motora',tmi:'TMI',eletro:'Eletroestim.'};
     const conductStr=Object.entries(conducts).map(([k,v])=>`${conductLabels[k]||k}: ${v}`).join(' | ');
     const alertas = r.sbar.a.fields?.alertasPendencias?.value || r.sbar.a.fields?.alertasPendenciasPed?.value || '';
+    
+    if (cfg.isPH) {
+      const f = r.sbar.a.fields || {};
+      return `<div class="history-item" style="border-left:4px solid ${cfg.color||'#666'}; background:#fff5f5;">
+        <div class="history-meta">📅 ${ds} • 🚨 CHAMADO DE INTERCORRÊNCIA • ${r.profName}</div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+          <div class="history-section"><strong>🕒 Horário:</strong><p>${f.phHorario?.value||'—'}</p></div>
+          <div class="history-section"><strong>📱 Acionamento:</strong><p>${f.phAcionamento?.value||'—'}</p></div>
+        </div>
+        <div class="history-section"><strong>📝 Caso:</strong><p>${f.phCaso?.value||'—'}</p></div>
+        <div class="history-section"><strong>❓ Motivo:</strong><p>${f.phMotivo?.value||'—'}</p></div>
+        <div class="history-section"><strong>📋 Avaliação:</strong><p>${f.phAvaliacao?.value||'—'}</p></div>
+        <div class="history-section"><strong>🤝 Conduta:</strong><p>${f.phConduta?.value||'—'}</p></div>
+      </div>`;
+    }
+
     return `<div class="history-item" style="border-left:4px solid ${cfg.color||'#666'}">
       <div class="history-meta">📅 ${ds} • ${cfg.icon||'👤'} ${r.profName||r.fisioName||''} (${prof}) • ${r.profEmail||r.fisioEmail||''}${r.sector?' • 🏥 '+r.sector:''}</div>
       ${alertas ? `<div style="background:#fff3e0; border:1px solid #ffe0b2; border-radius:8px; padding:10px; margin:10px 0; color:#e65100; font-weight:700; font-size:13px;">⚠️ ALERTA: ${alertas}</div>` : ''}
@@ -1653,6 +1779,56 @@ async function confirmChangePass() {
 }
 
 // ============ PDF REPORT ============
+function generatePHReport() {
+  const allSbar = DB.getSBAR();
+  const patients = DB.getPatients();
+  const now = new Date();
+  const todayStr = now.toLocaleDateString('pt-BR');
+  
+  // Filter PH records from today
+  const phRecords = allSbar.filter(r => {
+    const cfg = PROF_CONFIG[r.profKey] || PROF_CONFIG[r.profissao] || {};
+    const date = new Date(r.timestamp).toLocaleDateString('pt-BR');
+    return cfg.isPH && date === todayStr;
+  });
+
+  if (!phRecords.length) { showToast('Nenhum chamado PH registrado hoje.'); return; }
+
+  let rows = phRecords.map(r => {
+    const p = patients.find(pt => pt.id === r.patientId) || {name:'Desconhecido', bed:'—'};
+    const f = r.sbar.a.fields || {};
+    return `<tr>
+      <td style="padding:8px;border:1px solid #ddd;">${f.phHorario?.value||'—'}</td>
+      <td style="padding:8px;border:1px solid #ddd;"><strong>${p.name}</strong><br><small>Leito: ${p.bed}</small></td>
+      <td style="padding:8px;border:1px solid #ddd;">${f.phCaso?.value||'—'}</td>
+      <td style="padding:8px;border:1px solid #ddd;">${f.phAcionamento?.value||'—'}</td>
+      <td style="padding:8px;border:1px solid #ddd;">${f.phMotivo?.value||'—'}</td>
+      <td style="padding:8px;border:1px solid #ddd;">${f.phAvaliacao?.value||'—'}</td>
+      <td style="padding:8px;border:1px solid #ddd;">${f.phConduta?.value||'—'}</td>
+      <td style="padding:8px;border:1px solid #ddd;">${r.profName}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório Diário PH - ${todayStr}</title>
+    <style>body{font-family:Arial,sans-serif;padding:20px;color:#333}
+    h1{color:#d32f2f;font-size:22px;border-bottom:2px solid #d32f2f;padding-bottom:10px}
+    table{width:100%;border-collapse:collapse;font-size:12px;margin-top:20px}
+    th{background:#f5f5f5;padding:10px;text-align:left;border:1px solid #ddd}
+    td{padding:8px;border:1px solid #ddd;vertical-align:top}
+    </style></head><body>
+    <h1>🚨 Relatório Diário de Intercorrências - PH (${todayStr})</h1>
+    <table>
+      <thead><tr><th>Horário</th><th>Paciente</th><th>Caso</th><th>Acionamento</th><th>Motivo</th><th>Avaliação</th><th>Conduta</th><th>Fisioterapeuta</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
 function generateSectorPDF() {
   const sector = currentSector;
   if (sector === 'Todos') { showToast('Selecione um setor específico para gerar o PDF'); return; }
