@@ -126,7 +126,7 @@ async function initStorage() {
   // Fallback to JSON
   jsonStorage.init();
   storage = jsonStorage;
-  console.log("Using JSON file storage (MongoDB connection failed or MONGO_URI not set).");
+  console.log("Using JSON file storage (MongoDB connection failed or MONGO_URI not set)."); (MongoDB connection failed or MONGO_URI not set).");
 }
 
 function parseBody(req) {
