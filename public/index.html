@@ -105,7 +105,7 @@
     .stat-card{background:#fff;border-radius:10px;padding:14px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.05)}
     .stat-number{font-size:24px;font-weight:700;color:var(--primary)}.stat-label{font-size:11px;color:var(--text-light);margin-top:4px}
     .password-wrapper{position:relative}.password-wrapper .form-input{padding-right:50px}
-    .toggle-pass{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:20px;cursor:pointer;padding:8px;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center}
+    .toggle-pass{position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:20px;cursor:pointer;padding:8px;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;z-index:10}
     .multi-device-container{display:flex;flex-direction:column;gap:10px}
     .device-item{background:#f8f9fa;border:1px solid var(--border);border-radius:10px;padding:12px;position:relative}
     .device-item-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
@@ -1808,8 +1808,13 @@ function toggleAdminMode() {
 // ============ PASSWORD TOGGLE ============
 function togglePassword(inputId, btn) {
   const input = document.getElementById(inputId);
-  if (input.type === 'password') { input.type = 'text'; btn.textContent = '👁️'; }
-  else { input.type = 'password'; btn.textContent = '🙈'; }
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '👁️';
+  } else {
+    input.type = 'password';
+    btn.textContent = '🙈';
+  }
 }
 
 // ============ SELF CHANGE PASSWORD ============
