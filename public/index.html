@@ -7,6 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>SBAR Unimed CG</title>
+  <script>console.log('Frontend Version: 20260515.1');</script>
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" href="/icon-192.png">
   <link rel="apple-touch-icon" href="/icon-192.png">
@@ -952,6 +953,7 @@ async function handleLogin() {
   if (!email || !password) { showToast('Preencha todos os campos'); return; }
   try {
     const user = await DB.apiLogin(email, password);
+    console.log('Login successful, user object:', user);
     currentUser = user;
     DB.setCurrentUser(user);
     await DB.fetchPatients();
@@ -959,6 +961,7 @@ async function handleLogin() {
     await DB.fetchUsers();
     showDashboard();
   } catch(e) {
+    console.error('Login error:', e);
     showToast(e.message || 'Erro ao fazer login');
   }
 }
