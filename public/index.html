@@ -211,6 +211,11 @@
   </div>
   <div id="tabTodos" class="tab-content">
     <div class="dashboard">
+      <div class="admin-filter" id="statusFilter" style="margin-bottom:16px;">
+        <button class="admin-filter-btn active" onclick="setStatusFilter('todos', this)">Todos</button>
+        <button class="admin-filter-btn" onclick="setStatusFilter('ativos', this)">Ativos</button>
+        <button class="admin-filter-btn" onclick="setStatusFilter('inativos', this)">Inativos</button>
+      </div>
       <div class="search-bar"><span class="search-icon">🔍</span><input type="text" class="search-input" id="searchAllPatients" placeholder="Buscar paciente por nome, leito ou setor..." oninput="renderAllPatients()"></div>
       <div id="allPatientsList"></div>
     </div>
@@ -958,7 +963,14 @@ function renderPatients() {
 function renderAllPatients() {
   const q = (document.getElementById('searchAllPatients').value||'').toLowerCase().trim();
   let pts = DB.getPatients();
+  
+  // Status filter
+  if (currentStatusFilter === 'ativos') pts = pts.filter(p => !p.discharged);
+  else if (currentStatusFilter === 'inativos') pts = pts.filter(p => p.discharged);
+
+  // Search filter
   if (q) pts = pts.filter(p=>p.name.toLowerCase().includes(q)||p.bed.toLowerCase().includes(q)||p.sector.toLowerCase().includes(q));
+  
   pts.sort((a,b)=>{ if(a.discharged&&!b.discharged) return 1; if(!a.discharged&&b.discharged) return -1; return 0; });
   const c = document.getElementById('allPatientsList');
   if (!pts.length) { c.innerHTML='<div class="empty-state"><div class="icon">🔍</div><p>Nenhum paciente encontrado.</p></div>'; return; }
@@ -1410,6 +1422,14 @@ function renderSbarRecords(records){
 
 // ============ ADMIN PANEL ============
 let adminFilter = 'todos';
+let currentStatusFilter = 'todos';
+
+function setStatusFilter(status, btn) {
+  currentStatusFilter = status;
+  document.querySelectorAll('#statusFilter .admin-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAllPatients();
+}
 
 function renderAdminPanel() {
   renderAdminStats();
