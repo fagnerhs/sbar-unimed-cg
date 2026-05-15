@@ -1316,7 +1316,15 @@ function openSbarForm() {
   document.getElementById('sbarStepper').style.display = isPH ? 'none' : 'flex';
   if (isPH) {
     currentStep = 2; // Go directly to Assessment (which contains PH fields)
+    // Hide S, B, R panels for PH
+    document.getElementById('step0').style.display = 'none';
+    document.getElementById('step1').style.display = 'none';
+    document.getElementById('step3').style.display = 'none';
     updateStepper();
+  } else {
+    document.getElementById('step0').style.display = '';
+    document.getElementById('step1').style.display = '';
+    document.getElementById('step3').style.display = '';
   }
 
   // --- AUTO-FILL LOGIC ---
@@ -1370,14 +1378,15 @@ function closeSbarForm() { document.getElementById('sbarFormScreen').classList.r
 function updateStepper() {
   const isPH = getActiveProfKey() === 'Fisioterapia_PH';
   document.querySelectorAll('.step-item').forEach((item,i)=>{ item.classList.remove('active','done'); if(i===currentStep)item.classList.add('active'); if(i<currentStep)item.classList.add('done'); });
-  document.querySelectorAll('.step-panel').forEach((p,i)=>{ p.classList.toggle('active',i===currentStep); });
   
   if (isPH) {
+    document.querySelectorAll('.step-panel').forEach((p,i)=>{ p.classList.toggle('active',i===2); });
     document.getElementById('prevBtn').style.display = 'none';
     document.getElementById('nextBtn').textContent = 'Salvar Chamado';
     document.getElementById('nextBtn').classList.remove('btn-primary');
     document.getElementById('nextBtn').classList.add('btn-success');
   } else {
+    document.querySelectorAll('.step-panel').forEach((p,i)=>{ p.classList.toggle('active',i===currentStep); });
     document.getElementById('prevBtn').style.display = currentStep===0?'none':'';
     document.getElementById('nextBtn').textContent = currentStep===3?'Salvar Passagem':'Próximo';
     if(currentStep===3){document.getElementById('nextBtn').classList.remove('btn-primary');document.getElementById('nextBtn').classList.add('btn-success');}
