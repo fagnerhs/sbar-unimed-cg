@@ -116,17 +116,13 @@ async function initStorage() {
       console.log(`Using MongoDB Atlas for data storage with URI: ${MONGO_URI}`);
       return;
     } catch (e) {
-      console.error('MongoDB connection failed:', e.message);
-      console.log('Falling back to JSON file storage...');
+      console.error("Fatal error: MongoDB connection failed. Exiting.", e.message);
+      process.exit(1); // Exit if MongoDB connection fails
     }
   } else {
-    console.log('No MONGO_URI set.');
+    console.error("Fatal error: MONGO_URI not set. Exiting.");
+    process.exit(1); // Exit if MONGO_URI is not set
   }
-
-  // Fallback to JSON
-  jsonStorage.init();
-  storage = jsonStorage;
-  console.log("Using JSON file storage (MongoDB connection failed or MONGO_URI not set)."); (MongoDB connection failed or MONGO_URI not set).");
 }
 
 function parseBody(req) {
@@ -268,13 +264,5 @@ initStorage().then(() => {
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`SBAR Unimed CG running on http://0.0.0.0:${PORT}`);
     console.log(`Storage: ${storage.name}`);
-  });
-}).catch(e => {
-  console.error('Fatal error:', e.message);
-  // Start with JSON fallback anyway
-  jsonStorage.init();
-  storage = jsonStorage;
-  server.listen(PORT, '0.0.0.0', () => {
-    console.log(`SBAR Unimed CG running on http://0.0.0.0:${PORT} (JSON fallback)`);
   });
 });
