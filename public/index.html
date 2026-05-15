@@ -285,7 +285,7 @@
 <!-- ADD PATIENT MODAL -->
 <div class="modal-overlay" id="addPatientModal">
   <div class="modal-card">
-    <h3>Novo Paciente</h3>
+    <h3 id="patientModalTitle">Novo Paciente</h3>
     <div class="form-group"><label>Nome / Iniciais</label><input type="text" id="patientName" class="form-input" placeholder="Ex: J.S.O."></div>
     <div style="display:flex;gap:12px;">
       <div class="form-group" style="flex:1;"><label>Idade</label><input type="text" id="patientAge" class="form-input" placeholder="Ex: 45 anos"></div>
@@ -948,6 +948,7 @@ function renderPatients() {
         <button class="card-action-btn action-sbar" onclick="startSbar('${p.id}')">📝 SBAR</button>
         <button class="card-action-btn action-history" onclick="startHistory('${p.id}')">📖 Histórico</button>
         <button class="card-action-btn" style="border-color:#9c27b0;color:#9c27b0;" onclick="startMulti('${p.id}')">👥 Multi</button>
+        <button class="card-action-btn" style="border-color:var(--accent);color:var(--accent);" onclick="editPatient('${p.id}')">✏️ Editar</button>
         <button class="card-action-btn action-discharge" onclick="startDischarge('${p.id}')">🏠 Alta</button>
         ${isPrimaryAdmin?`<button class="card-action-btn" style="border-color:#c62828;color:#c62828;" onclick="deletePatient('${p.id}')">🗑️ Excluir</button>`:''}
       </div>
@@ -973,17 +974,52 @@ function renderAllPatients() {
 }
 
 // ============ PATIENT MGMT ============
-function showAddPatient(){ document.getElementById('addPatientModal').classList.add('active'); if(currentSector && currentSector!=='Todos'){document.getElementById('patientSector').value=currentSector;} }
-function closeAddPatient(){ document.getElementById('addPatientModal').classList.remove('active'); document.getElementById('patientName').value=''; document.getElementById('patientBed').value=''; document.getElementById('patientSector').value=''; document.getElementById('patientAge').value=''; document.getElementById('patientGender').value=''; document.getElementById('patientCritical').checked=false; }
+let editingPatientId = null;
+function showAddPatient(){ 
+  editingPatientId = null;
+  document.getElementById('patientModalTitle').textContent = 'Novo Paciente';
+  document.getElementById('addPatientModal').classList.add('active'); 
+  if(currentSector && currentSector!=='Todos'){document.getElementById('patientSector').value=currentSector;} 
+}
+function editPatient(id) {
+  const p = DB.getPatients().find(p => p.id === id);
+  if (!p) return;
+  editingPatientId = id;
+  document.getElementById('patientModalTitle').textContent = 'Editar Paciente';
+  document.getElementById('patientName').value = p.name;
+  document.getElementById('patientAge').value = p.age || '';
+  document.getElementById('patientGender').value = p.gender || '';
+  document.getElementById('patientBed').value = p.bed;
+  document.getElementById('patientSector').value = p.sector;
+  document.getElementById('patientCritical').checked = p.critical || false;
+  document.getElementById('addPatientModal').classList.add('active');
+}
+function closeAddPatient(){ 
+  document.getElementById('addPatientModal').classList.remove('active'); 
+  document.getElementById('patientName').value=''; 
+  document.getElementById('patientBed').value=''; 
+  document.getElementById('patientSector').value=''; 
+  document.getElementById('patientAge').value=''; 
+  document.getElementById('patientGender').value=''; 
+  document.getElementById('patientCritical').checked=false; 
+  editingPatientId = null;
+}
 async function addPatient(){
   const n=document.getElementById('patientName').value.trim(), b=document.getElementById('patientBed').value.trim(), s=document.getElementById('patientSector').value, cr=document.getElementById('patientCritical').checked;
   const age=document.getElementById('patientAge').value.trim(), gender=document.getElementById('patientGender').value;
   if(!n||!b||!s){showToast('Preencha nome, leito e setor');return;}
   try {
-    await DB.apiAddPatient({name:n,bed:b,sector:s,critical:cr,age:age,gender:gender,discharged:false,dischargeDate:null});
+    const data = {name:n,bed:b,sector:s,critical:cr,age:age,gender:gender};
+    if (editingPatientId) {
+      await DB.apiUpdatePatient(editingPatientId, data);
+      showToast('Paciente atualizado!');
+    } else {
+      await DB.apiAddPatient({...data, discharged:false, dischargeDate:null});
+      showToast('Paciente adicionado!');
+    }
     await DB.fetchPatients();
-    closeAddPatient(); renderPatients(); showToast('Paciente adicionado!');
-  } catch(e) { showToast('Erro ao adicionar paciente'); }
+    closeAddPatient(); renderPatients();
+  } catch(e) { showToast('Erro ao salvar paciente'); }
 }
 
 async function deletePatient(id) {
