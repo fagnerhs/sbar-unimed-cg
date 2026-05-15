@@ -5,7 +5,7 @@ const path = require('path');
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DATA_DIR = path.join(__dirname, 'data');
-const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://fagnersato_db_user:pfCnUFa75WxpALCK@cluster0.7y9dyzb.mongodb.net/sbar_unimed_cg?retryWrites=true&w=majority';
+const MONGO_URI = process.env.MONGO_URI;
 const DB_NAME = 'sbar_unimed_cg';
 
 // Ensure data directory exists for JSON fallback
@@ -113,7 +113,7 @@ async function initStorage() {
       await db.collection('sbar').createIndex({ timestamp: -1 }).catch(() => {});
 
       storage = createMongoStorage(db);
-      console.log('Using MongoDB Atlas for data storage');
+      console.log(`Using MongoDB Atlas for data storage with URI: ${MONGO_URI}`);
       return;
     } catch (e) {
       console.error('MongoDB connection failed:', e.message);
@@ -126,7 +126,7 @@ async function initStorage() {
   // Fallback to JSON
   jsonStorage.init();
   storage = jsonStorage;
-  console.log('Using JSON file storage');
+  console.log("Using JSON file storage (MongoDB connection failed or MONGO_URI not set).");
 }
 
 function parseBody(req) {
@@ -231,12 +231,6 @@ const server = http.createServer(async (req, res) => {
         const body = await parseBody(req); body.id = Date.now().toString();
         const r = await storage.addSbar(body);
         res.writeHead(201); res.end(JSON.stringify(r)); return;
-      }
-
-      // TEMPORARY DEBUG ENDPOINT
-      if (req.url === '/api/debug-mongo-uri' && req.method === 'GET') {
-        res.writeHead(200); res.end(JSON.stringify({ MONGO_URI: process.env.MONGO_URI })); return;
-      }
       }
 
       // DELETE /api/sbar/:id
