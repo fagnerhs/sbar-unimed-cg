@@ -590,7 +590,11 @@ const PROF_CONFIG = {
       { type:'number', id:'freqRespPedF', label:'FR (irpm)', placeholder:'20-60', min:0, max:100 },
       { type:'number', id:'spo2PedF', label:'SpO2 (%)', placeholder:'0-100', min:0, max:100 },
       { type:'select', id:'viaAereaPedF', label:'Via Aérea Artificial', options:['','Sem via aérea artificial','TOT (Tubo Orotraqueal)','TQT (Traqueostomia)','Cânula Nasal'] },
-      { type:'text', id:'paramVentObsPedF', label:'Observações VM', placeholder:'Ex: nº TOT, fixação, aspiração...' }
+      { type:'text', id:'paramVentObsPedF', label:'Observações VM', placeholder:'Ex: nº TOT, fixação, aspiração...' },
+      { type:'select', id:'fssScale', label:'Escala FSS', options:['','Não se aplica','1 - Normal','2 - Comprometimento leve','3 - Comprometimento moderado','4 - Comprometimento grave','5 - Comprometimento muito grave'] },
+      { type:'select', id:'picuUpScale', label:'Escala PICU UP', options:['','Não se aplica','Nível 1','Nível 2','Nível 3','Nível 4'] },
+      { type:'select', id:'bsaScale', label:'Escala BSA', options:['','Não se aplica','Nível 0','Nível 1','Nível 2','Nível 3','Nível 4','Nível 5'] },
+      { type:'select', id:'wangScale', label:'ESCORE WANG', options:['','Não se aplica','0-3 (Leve)','4-7 (Moderado)','8-12 (Grave)'] }
     ],
     conducts: [
       { id:'desmamePed', label:'Desmame Ventilatório' },
