@@ -5,7 +5,7 @@ const path = require('path');
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DATA_DIR = path.join(__dirname, 'data');
-const MONGO_URI = process.env.MONGO_URI || '';
+const MONGO_URI = 'mongodb+srv://fagnersato_db_user:pfCnUFa75WxpALCK@cluster0.7y9dyzb.mongodb.net/sbar_unimed_cg?retryWrites=true&w=majority';
 const DB_NAME = 'sbar_unimed_cg';
 
 // Ensure data directory exists for JSON fallback
@@ -219,6 +219,8 @@ const server = http.createServer(async (req, res) => {
 
       // GET /api/sbar
       if (req.url === '/api/sbar' && req.method === 'GET') {
+        // For now, return all SBARs. Frontend will handle filtering based on user roles.
+        // TODO: Implement server-side filtering for PH records based on user role.
         res.writeHead(200); res.end(JSON.stringify(await storage.getSbar())); return;
       }
 

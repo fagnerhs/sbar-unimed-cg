@@ -1,0 +1,26 @@
+[
+  {
+    "id": "admin_001",
+    "name": "Administrador",
+    "email": "admin@unimedcg.coop.br",
+    "password": "admin123",
+    "profissao": "Administrador",
+    "conselho": "N/A",
+    "setor": "Todos",
+    "role": "admin",
+    "status": "active"
+  },
+  {
+    "name": "Teste Fisioterapia PH",
+    "email": "fisio.ph@unimedcg.coop.br",
+    "password": "FisioPH@2026",
+    "profissao": "Fisioterapia",
+    "conselho": "123456-PH",
+    "setor": "PA-Adulto",
+    "id": "1778879466534",
+    "role": "user",
+    "status": "active",
+    "approvedBy": "admin@unimedcg.coop.br",
+    "approvedDate": "2026-05-15T21:11:40.407Z"
+  }
+]

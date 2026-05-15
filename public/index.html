@@ -226,6 +226,13 @@
       <div class="admin-stats" id="adminStats"></div>
 
       <div class="admin-filter" id="adminFilter"></div>
+      <div id="phReportSection" style="margin-bottom:20px; display:none; flex-direction:column; gap:10px; background:#fff; padding:15px; border-radius:12px; border:1px solid #eee;">
+        <label style="font-size:13px; font-weight:700; color:#d32f2f;">📊 Relatório de Intercorrências (PH)</label>
+        <div style="display:flex; gap:10px;">
+          <input type="date" id="phReportDate" class="form-input" style="flex:1;">
+          <button class="btn btn-primary" onclick="generatePHReport()" style="flex:1; background:#d32f2f; margin-top:0;">Gerar Relatório</button>
+        </div>
+      </div>
       <div class="search-bar"><span class="search-icon">🔍</span><input type="text" class="search-input" id="searchUsers" placeholder="Buscar por nome, e-mail ou profissão..." oninput="renderAdminUsers()"></div>
       <div id="adminUserList"></div>
     </div>
@@ -491,7 +498,7 @@ const PROF_CONFIG = {
   'Fisioterapia': {
     conselho: 'CREFITO', icon: '🫁', color: '#1565c0',
     hasSubProfile: true,
-    subProfiles: ['Adulto', 'Neonatal/Pediatria'],
+    subProfiles: ['Adulto', 'Neonatal/Pediatria', 'PH'],
     assessFields: [
       { type:'select', id:'modoVent', label:'Modo Ventilatório', options:['','Ar Ambiente','Cateter Nasal','CNAF','Máscara de Venturi','Máscara de Reservatório','Macro Nebulização','VNI','VMI'] },
       { type:'select', id:'padRespFisio', label:'Padrão Respiratório', options:['','Eupneico','Taquipneico','Bradipneico','Dispneico','Tiragem Intercostal','Tiragem de Fúrcula','Batimento de Asa de Nariz'] },
@@ -607,6 +614,27 @@ const PROF_CONFIG = {
       if(numSessoes) r.push(`Realizar ${numSessoes} de fisioterapia.`);
       return r;
     }
+  },
+
+  'Fisioterapia_PH': {
+    conselho: 'CREFITO', icon: '🚨', color: '#d32f2f',
+    displayName: 'Fisioterapia PH',
+    parentProf: 'Fisioterapia',
+    isPH: true,
+    assessFields: [
+      { type:'text', id:'phPaciente', label:'👤 Paciente', placeholder:'Nome ou Iniciais...' },
+      { type:'text', id:'phLeito', label:'🛏️ Leito', placeholder:'Ex: 101-A' },
+      { type:'select', id:'phSetor', label:'🏥 Setor', options:['','PA-Adulto','PA-PED','UTI 1','UTI 2','UCO','UTI Mista','1° Andar','3° Andar','4° Andar','5° Andar','6° Andar','7° Andar'] },
+      { type:'text', id:'phHorario', label:'🕒 Horário', placeholder:'Ex: 14:30' },
+      { type:'text', id:'phCaso', label:'📝 Caso', placeholder:'Descreva o caso...' },
+      { type:'text', id:'phAcionamento', label:'📱 Acionamento', placeholder:'Quem acionou?' },
+      { type:'text', id:'phMotivo', label:'❓ Motivo', placeholder:'Motivo do chamado...' },
+      { type:'text', id:'phAvaliacao', label:'📋 Avaliação', placeholder:'Avaliação realizada...' },
+      { type:'text', id:'phConduta', label:'🤝 Conduta', placeholder:'Conduta adotada...' }
+    ],
+    conducts: [],
+    conductTitle: 'Chamado de Intercorrência',
+    autoRec(){ return []; }
   },
 
   'Enfermagem_NP': {
@@ -998,20 +1026,15 @@ function showDashboard() {
   }
   document.getElementById('userDisplay').innerHTML = displayText + toggleBtn;
   // Show/hide admin tab (visible for admin and delegated admins)
-  const showAdminTab = isAdmin || currentUser.role === 'delegated_admin';
-  document.getElementById('navAdmin').style.display = showAdminTab ? '' : 'none';
-  if (showAdminTab) {
-    // PH Report access: Primary Admin OR (Fisio AND Admin/Delegated)
-    const isPrimaryAdmin = currentUser.id === 'admin_001';
-    const isFisioAdmin = currentUser.profissao === 'Fisioterapia' && (currentUser.role === 'admin' || currentUser.role === 'delegated_admin');
-    const phSection = document.getElementById('phReportSection');
-    if (phSection) phSection.style.display = (isPrimaryAdmin || isFisioAdmin) ? 'flex' : 'none';
-
-    // Set default date for PH report to today
-    const today = new Date().toISOString().split('T')[0];
-    const dateInput = document.getElementById('phReportDate');
-    if (dateInput) dateInput.value = today;
-  }
+    const showAdminTab = isAdmin || currentUser.role === 'delegated_admin';
+    document.getElementById('navAdmin').style.display = showAdminTab ? '' : 'none';
+    if (showAdminTab) {
+      renderAdminPanel(); // Ensure admin panel elements are rendered
+      // Set default date for PH report to today
+      const today = new Date().toISOString().split('T')[0];
+      const dateInput = document.getElementById('phReportDate');
+      if (dateInput) dateInput.value = today;
+    }
   // If delegated admin is in admin mode, show admin indicator
   if (currentUser.role === 'delegated_admin') {
     displayText += ` <button onclick="toggleAdminMode()" style="background:rgba(255,255,255,0.25);border:none;color:#fff;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;margin-left:8px;cursor:pointer;">🔄 ${currentUser._adminMode?'Modo Admin':'Modo Profissional'}</button>`;
@@ -1061,6 +1084,7 @@ function renderPatients() {
   const isPH = getActiveProfKey() === 'Fisioterapia_PH';
   
   if (isPH) {
+    document.getElementById('searchBarContainer').style.display = 'none';
     c.innerHTML = `
       <div class="empty-state" style="padding:40px 20px;">
         <div class="icon" style="font-size:64px; margin-bottom:20px;">🚨</div>
@@ -1071,6 +1095,7 @@ function renderPatients() {
       </div>`;
     return;
   }
+  document.getElementById('searchBarContainer').style.display = 'flex';
 
   const patients = DB.getPatients().filter(p=>!p.discharged);
   const filtered = currentSector==='Todos' ? patients : patients.filter(p=>p.sector===currentSector);
@@ -1229,11 +1254,12 @@ async function confirmReadmit(){
 // ============ SBAR ACTIONS ============
 function startSbar(id){ const pts=DB.getPatients(); selectedPatient=pts.find(p=>p.id===id); if(!selectedPatient)return; openSbarForm(); }
 function startPHSbar() {
-  selectedPatient = { id: 'PH_TEMP', name: 'Novo Chamado PH' };
+  selectedPatient = { id: 'PH_TEMP', name: 'Chamado PH', bed: '—' };
   openSbarForm();
 }
+
 function openPHHistory() {
-  selectedPatient = { id: 'PH_TEMP', name: 'Meus Chamados PH' };
+  selectedPatient = { id: 'PH_TEMP', name: 'Meus Chamados PH', bed: '—' };
   openHistory();
 }
 function startHistory(id){ const pts=DB.getPatients(); selectedPatient=pts.find(p=>p.id===id); if(!selectedPatient)return; openHistory(); }
@@ -1478,15 +1504,26 @@ async function saveSBAR(){
   if(_savingInProgress){return;}
   const isPH = getActiveProfKey() === 'Fisioterapia_PH';
   const s=document.getElementById('sbarS').value.trim();
-  if(!isPH && !s){showToast('Preencha o campo Situação (S)');currentStep=0;updateStepper();return;}
-  _savingInProgress = true;
-  document.getElementById('nextBtn').disabled = true;
-  document.getElementById('nextBtn').textContent = 'Salvando...';
+  
   const profKey = getActiveProfKey();
   const profDisplay = getActiveProfDisplay();
   const assessment = getAssessFields();
-  const record={
-    patientId:selectedPatient.id,
+
+  if (isPH) {
+    if (!assessment.phPaciente?.value || !assessment.phLeito?.value || !assessment.phSetor?.value) {
+      showToast('Preencha Paciente, Leito e Setor');
+      return;
+    }
+  } else {
+    if (!s) { showToast('Preencha o campo Situação (S)'); currentStep=0; updateStepper(); return; }
+  }
+
+  _savingInProgress = true;
+  document.getElementById('nextBtn').disabled = true;
+  document.getElementById('nextBtn').textContent = 'Salvando...';
+
+  const record = {
+    patientId: isPH ? 'PH_RECORD' : selectedPatient.id,
     odId:currentUser.id,
     profEmail:currentUser.email,
     profName:currentUser.name,
@@ -1502,7 +1539,7 @@ async function saveSBAR(){
     sbar:{
       s:s,
       b:document.getElementById('sbarB').value.trim(),
-      a:{ fields:assessment, conducts:getConducts() },
+      a:{ fields: assessment },
       r:document.getElementById('sbarR').value.trim()
     }
   };
@@ -1511,8 +1548,9 @@ async function saveSBAR(){
     await DB.fetchSBAR();
     _savingInProgress = false;
     document.getElementById('nextBtn').disabled = false;
-    closeSbarForm(); showToast('Passagem SBAR salva com sucesso!');
-  } catch(e) { _savingInProgress = false; document.getElementById('nextBtn').disabled = false; showToast('Erro ao salvar passagem'); }
+    closeSbarForm(); showToast(isPH ? 'Chamado PH salvo com sucesso!' : 'Passagem SBAR salva com sucesso!');
+    if (isPH) renderPatients();
+  } catch(e) { _savingInProgress = false; document.getElementById('nextBtn').disabled = false; showToast('Erro ao salvar registro'); }
 }
 
 // ============ HISTORY (filtered by user's profession + sub-profile) ============
@@ -1665,6 +1703,15 @@ function setStatusFilter(status, btn) {
 function renderAdminPanel() {
   renderAdminStats();
   renderAdminFilter();
+  
+  // Show PH Report section only for Primary Admin or Physiotherapy Admins
+  const phSection = document.getElementById('phReportSection');
+  if (phSection) {
+    const isPrimaryAdmin = currentUser.id === 'admin_001';
+    const isPhysioAdmin = currentUser.role === 'delegated_admin' && currentUser.profissao === 'Fisioterapia';
+    phSection.style.display = (isPrimaryAdmin || isPhysioAdmin) ? 'flex' : 'none';
+  }
+  
   renderAdminUsers();
 }
 
@@ -1895,10 +1942,9 @@ function generatePHReport() {
   if (!phRecords.length) { showToast('Nenhum chamado PH registrado hoje.'); return; }
 
   let cards = phRecords.map(r => {
-    const p = patients.find(pt => pt.id === r.patientId) || {name:'Desconhecido', bed:'—'};
     const f = r.sbar.a.fields || {};
-    const patientName = r.phPaciente || p.name;
-    const patientBed = f.phLeito?.value || p.bed;
+    const patientName = f.phPaciente?.value || r.phPaciente || '—';
+    const patientBed = f.phLeito?.value || '—';
     const patientSector = f.phSetor?.value || r.sector || '—';
 
     return `
