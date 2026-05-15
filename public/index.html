@@ -224,8 +224,12 @@
     <div class="dashboard">
       <h3 style="font-size:18px;margin-bottom:16px;color:var(--primary);">⚙️ Painel Administrativo</h3>
       <div class="admin-stats" id="adminStats"></div>
-      <div style="margin-bottom:20px; display:flex; gap:10px;">
-        <button class="btn btn-primary" onclick="generatePHReport()" style="flex:1; background:#d32f2f;">📊 Relatório Diário PH</button>
+      <div style="margin-bottom:20px; display:flex; flex-direction:column; gap:10px; background:#fff; padding:15px; border-radius:12px; border:1px solid #eee;">
+        <label style="font-size:13px; font-weight:700; color:#d32f2f;">📊 Relatório de Intercorrências (PH)</label>
+        <div style="display:flex; gap:10px;">
+          <input type="date" id="phReportDate" class="form-input" style="flex:1;">
+          <button class="btn btn-primary" onclick="generatePHReport()" style="flex:1; background:#d32f2f; margin-top:0;">Gerar Relatório</button>
+        </div>
       </div>
       <div class="admin-filter" id="adminFilter"></div>
       <div class="search-bar"><span class="search-icon">🔍</span><input type="text" class="search-input" id="searchUsers" placeholder="Buscar por nome, e-mail ou profissão..." oninput="renderAdminUsers()"></div>
@@ -1018,6 +1022,12 @@ function showDashboard() {
   // Show/hide admin tab (visible for admin and delegated admins)
   const showAdminTab = isAdmin || currentUser.role === 'delegated_admin';
   document.getElementById('navAdmin').style.display = showAdminTab ? '' : 'none';
+  if (showAdminTab) {
+    // Set default date for PH report to today
+    const today = new Date().toISOString().split('T')[0];
+    const dateInput = document.getElementById('phReportDate');
+    if (dateInput) dateInput.value = today;
+  }
   // If delegated admin is in admin mode, show admin indicator
   if (currentUser.role === 'delegated_admin') {
     displayText += ` <button onclick="toggleAdminMode()" style="background:rgba(255,255,255,0.25);border:none;color:#fff;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;margin-left:8px;cursor:pointer;">🔄 ${currentUser._adminMode?'Modo Admin':'Modo Profissional'}</button>`;
@@ -1786,14 +1796,21 @@ async function confirmChangePass() {
 function generatePHReport() {
   const allSbar = DB.getSBAR();
   const patients = DB.getPatients();
-  const now = new Date();
-  const todayStr = now.toLocaleDateString('pt-BR');
+  const selectedDateVal = document.getElementById('phReportDate').value;
   
-  // Filter PH records from today
+  let targetDateStr;
+  if (selectedDateVal) {
+    const [y, m, d] = selectedDateVal.split('-');
+    targetDateStr = `${d}/${m}/${y}`;
+  } else {
+    targetDateStr = new Date().toLocaleDateString('pt-BR');
+  }
+  
+  // Filter PH records from selected date
   const phRecords = allSbar.filter(r => {
     const cfg = PROF_CONFIG[r.profKey] || PROF_CONFIG[r.profissao] || {};
     const date = new Date(r.timestamp).toLocaleDateString('pt-BR');
-    return cfg.isPH && date === todayStr;
+    return cfg.isPH && date === targetDateStr;
   });
 
   if (!phRecords.length) { showToast('Nenhum chamado PH registrado hoje.'); return; }
@@ -1813,14 +1830,14 @@ function generatePHReport() {
     </tr>`;
   }).join('');
 
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório Diário PH - ${todayStr}</title>
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório PH - ${targetDateStr}</title>
     <style>body{font-family:Arial,sans-serif;padding:20px;color:#333}
     h1{color:#d32f2f;font-size:22px;border-bottom:2px solid #d32f2f;padding-bottom:10px}
     table{width:100%;border-collapse:collapse;font-size:12px;margin-top:20px}
     th{background:#f5f5f5;padding:10px;text-align:left;border:1px solid #ddd}
     td{padding:8px;border:1px solid #ddd;vertical-align:top}
     </style></head><body>
-    <h1>🚨 Relatório Diário de Intercorrências - PH (${todayStr})</h1>
+    <h1>🚨 Relatório de Intercorrências - PH (${targetDateStr})</h1>
     <table>
       <thead><tr><th>Horário</th><th>Paciente</th><th>Caso</th><th>Acionamento</th><th>Motivo</th><th>Avaliação</th><th>Conduta</th><th>Fisioterapeuta</th></tr></thead>
       <tbody>${rows}</tbody>
