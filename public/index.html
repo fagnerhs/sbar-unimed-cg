@@ -287,6 +287,16 @@
   <div class="modal-card">
     <h3>Novo Paciente</h3>
     <div class="form-group"><label>Nome / Iniciais</label><input type="text" id="patientName" class="form-input" placeholder="Ex: J.S.O."></div>
+    <div style="display:flex;gap:12px;">
+      <div class="form-group" style="flex:1;"><label>Idade</label><input type="text" id="patientAge" class="form-input" placeholder="Ex: 45 anos"></div>
+      <div class="form-group" style="flex:1;"><label>Sexo</label>
+        <select id="patientGender" class="form-select">
+          <option value="">Selecione...</option>
+          <option>Masculino</option>
+          <option>Feminino</option>
+        </select>
+      </div>
+    </div>
     <div class="form-group"><label>Leito</label><input type="text" id="patientBed" class="form-input" placeholder="Ex: UTI1-05"></div>
     <div class="form-group"><label>Setor</label>
       <select id="patientSector" class="form-select"><option value="">Selecione...</option>
@@ -932,7 +942,7 @@ function renderPatients() {
   const isPrimaryAdmin = currentUser && currentUser.id === 'admin_001';
   c.innerHTML = filtered.map(p=>`
     <div class="patient-card ${p.critical?'critical':''}">
-      <div class="patient-card-header"><div><div class="patient-name">${p.name}</div><div class="patient-bed">Leito: ${p.bed} • ${p.sector}</div></div>
+      <div class="patient-card-header"><div><div class="patient-name">${p.name}</div><div class="patient-bed">Leito: ${p.bed} ${p.age?' • '+p.age:''} ${p.gender?' • '+p.gender:''} • ${p.sector}</div></div>
       <span class="patient-status ${p.critical?'status-critical':'status-stable'}">${p.critical?'Crítico':'Estável'}</span></div>
       <div class="patient-card-actions">
         <button class="card-action-btn action-sbar" onclick="startSbar('${p.id}')">📝 SBAR</button>
@@ -964,12 +974,13 @@ function renderAllPatients() {
 
 // ============ PATIENT MGMT ============
 function showAddPatient(){ document.getElementById('addPatientModal').classList.add('active'); if(currentSector && currentSector!=='Todos'){document.getElementById('patientSector').value=currentSector;} }
-function closeAddPatient(){ document.getElementById('addPatientModal').classList.remove('active'); document.getElementById('patientName').value=''; document.getElementById('patientBed').value=''; document.getElementById('patientSector').value=''; document.getElementById('patientCritical').checked=false; }
+function closeAddPatient(){ document.getElementById('addPatientModal').classList.remove('active'); document.getElementById('patientName').value=''; document.getElementById('patientBed').value=''; document.getElementById('patientSector').value=''; document.getElementById('patientAge').value=''; document.getElementById('patientGender').value=''; document.getElementById('patientCritical').checked=false; }
 async function addPatient(){
   const n=document.getElementById('patientName').value.trim(), b=document.getElementById('patientBed').value.trim(), s=document.getElementById('patientSector').value, cr=document.getElementById('patientCritical').checked;
-  if(!n||!b||!s){showToast('Preencha todos os campos');return;}
+  const age=document.getElementById('patientAge').value.trim(), gender=document.getElementById('patientGender').value;
+  if(!n||!b||!s){showToast('Preencha nome, leito e setor');return;}
   try {
-    await DB.apiAddPatient({name:n,bed:b,sector:s,critical:cr,discharged:false,dischargeDate:null});
+    await DB.apiAddPatient({name:n,bed:b,sector:s,critical:cr,age:age,gender:gender,discharged:false,dischargeDate:null});
     await DB.fetchPatients();
     closeAddPatient(); renderPatients(); showToast('Paciente adicionado!');
   } catch(e) { showToast('Erro ao adicionar paciente'); }
