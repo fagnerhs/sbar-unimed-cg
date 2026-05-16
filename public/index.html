@@ -145,7 +145,7 @@
       </div>
       <button class="btn btn-primary" onclick="handleLogin()">Entrar</button>
       <div class="register-link">Não tem conta? <a onclick="showRegister()">Cadastre-se</a></div>
-      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.4</div>
+      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.5</div>
     </div>
     <div id="registerForm" style="display:none;">
       <div class="form-group">
@@ -193,7 +193,7 @@
         </select>
       </div>
       <button class="btn btn-primary" onclick="handleRegister()">Cadastrar</button>
-      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.4</div>
+      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.5</div>
       <div class="register-link">Já tem conta? <a onclick="showLogin()">Fazer Login</a></div>
     </div>
   </div>
@@ -245,7 +245,7 @@
       <div id="adminUserList"></div>
     </div>
   </div>
-  <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.4</div>
+  <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.5</div>
     <div class="bottom-nav">
     <button class="nav-item active" id="navAtivos" onclick="switchTab('ativos')"><span class="nav-icon">🏥</span>Ativos</button>
     <button class="nav-item" id="navAdd" onclick="showAddPatient()"><span class="nav-icon">➕</span>Novo</button>
@@ -254,7 +254,7 @@
     <button class="nav-item" id="navTodos" onclick="switchTab('todos')"><span class="nav-icon">📋</span>Todos</button>
   </div>
       <button class="fab" onclick="showAddPatient()" title="Adicionar Paciente">+</button>
-      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.4</div>
+      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.5</div>
     </div>
 
 <!-- SBAR FORM SCREEN -->
@@ -263,7 +263,7 @@
     <button class="back-btn" onclick="closeSbarForm()">←</button>
     <h2 id="sbarFormTitle">Passagem SBAR</h2>
   </div>
-  <div class="stepper">
+  <div class="stepper" id="sbarStepper">
     <div class="step-item active" data-step="0"><div class="step-circle">S</div><div class="step-label">Situação</div></div>
     <div class="step-item" data-step="1"><div class="step-circle">B</div><div class="step-label">Background</div></div>
     <div class="step-item" data-step="2"><div class="step-circle">A</div><div class="step-label">Avaliação</div></div>
@@ -632,10 +632,9 @@ const PROF_CONFIG = {
     parentProf: 'Fisioterapia',
     isPH: true,
     assessFields: [
+      { type:'text', id:'phHorario', label:'🕒 Horário', placeholder:'Ex: 14:30' },
       { type:'text', id:'phPaciente', label:'👤 Paciente', placeholder:'Nome ou Iniciais...' },
       { type:'text', id:'phLeito', label:'🛏️ Leito', placeholder:'Ex: 101-A' },
-      { type:'select', id:'phSetor', label:'🏥 Setor', options:['','PA-Adulto','PA-PED','UTI 1','UTI 2','UCO','UTI Mista','1° Andar','3° Andar','4° Andar','5° Andar','6° Andar','7° Andar'] },
-      { type:'text', id:'phHorario', label:'🕒 Horário', placeholder:'Ex: 14:30' },
       { type:'text', id:'phCaso', label:'📝 Caso', placeholder:'Descreva o caso...' },
       { type:'text', id:'phAcionamento', label:'📱 Acionamento', placeholder:'Quem acionou?' },
       { type:'text', id:'phMotivo', label:'❓ Motivo', placeholder:'Motivo do chamado...' },
@@ -1313,14 +1312,16 @@ function buildAssessmentForm() {
     }
   });
   // Conducts
-  html += `<hr class="section-divider"><h3 class="assess-title">${cfg.conductTitle}</h3>`;
-  cfg.conducts.forEach(c => {
-    html += `<div class="conduct-group"><div class="conduct-label">${c.label}</div><div class="conduct-options" data-conduct="${c.id}">`;
-    CONDUCT_OPTIONS.forEach(opt => {
-      html += `<button class="conduct-btn" data-value="${opt}" onclick="selectConduct(this)">${opt}</button>`;
+  if (cfg.conducts && cfg.conducts.length > 0) {
+    html += `<hr class="section-divider"><h3 class="assess-title">${cfg.conductTitle}</h3>`;
+    cfg.conducts.forEach(c => {
+      html += `<div class="conduct-group"><div class="conduct-label">${c.label}</div><div class="conduct-options" data-conduct="${c.id}">`;
+      CONDUCT_OPTIONS.forEach(opt => {
+        html += `<button class="conduct-btn" data-value="${opt}" onclick="selectConduct(this)">${opt}</button>`;
+      });
+      html += '</div></div>';
     });
-    html += '</div></div>';
-  });
+  }
   container.innerHTML = html;
 }
 
@@ -1345,22 +1346,36 @@ function openSbarForm() {
   
   // Hide/Show panels based on PH
   const panels = document.querySelectorAll('.step-panel');
+  const formContent = document.querySelector('.form-content');
   if (isPH) {
     currentStep = 2;
+    formContent.style.paddingTop = '0';
     panels.forEach((p, i) => {
       if (i === 2) {
         p.style.display = 'block';
         p.classList.add('active');
+        p.style.padding = '0';
       } else {
         p.style.display = 'none';
         p.classList.remove('active');
       }
     });
+    // Custom PH Header Style
+    const assessmentContainer = document.getElementById('assessmentContainer');
+    assessmentContainer.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:center; gap:15px; background:#d32f2f; color:white; padding:15px; margin-bottom:20px; border-radius:8px;">
+        <div style="background:white; color:#d32f2f; padding:5px 10px; border-radius:4px; font-weight:bold; font-size:12px;">SOS</div>
+        <div style="font-weight:bold; font-size:16px;">Chamado de intercorrência</div>
+        <div style="background:white; color:#d32f2f; padding:5px 10px; border-radius:4px; font-weight:bold; font-size:12px;">SOS</div>
+      </div>
+    ` + assessmentContainer.innerHTML;
     updateStepper();
   } else {
+    formContent.style.paddingTop = '';
     panels.forEach((p, i) => {
       p.style.display = ''; // Reset to default
       p.classList.toggle('active', i === 0);
+      p.style.padding = '';
     });
   }
 
@@ -1537,8 +1552,8 @@ async function saveSBAR(){
   const assessment = getAssessFields();
 
   if (isPH) {
-    if (!assessment.phPaciente?.value || !assessment.phLeito?.value || !assessment.phSetor?.value) {
-      showToast('Preencha Paciente, Leito e Setor');
+    if (!assessment.phPaciente?.value || !assessment.phLeito?.value) {
+      showToast('Preencha Paciente e Leito');
       return;
     }
   } else {
@@ -1559,7 +1574,7 @@ async function saveSBAR(){
     profissaoDisplay: profDisplay,
     profKey: profKey,
     conselho:currentUser.conselho,
-    sector: isPH ? (assessment.phSetor?.value || currentUser.setor) : selectedPatient.sector,
+    sector: isPH ? (currentUser.setor || 'PA-Adulto') : selectedPatient.sector,
     patientBed: isPH ? (assessment.phLeito?.value || '—') : selectedPatient.bed,
     phPaciente: isPH ? (assessment.phPaciente?.value || '—') : null,
     timestamp:new Date().toISOString(),
@@ -1692,16 +1707,16 @@ function renderSbarRecords(records){
       return `<div class="history-item" style="border-left:4px solid ${cfg.color||'#666'}; background:#fff5f5;">
         <div class="history-meta">📅 ${ds} • 🚨 CHAMADO DE INTERCORRÊNCIA • ${r.profName}</div>
         <div style="background:#fff; padding:10px; border-radius:8px; margin:10px 0; border:1px solid #fee;">
-          <strong>👤 Paciente:</strong> ${r.phPaciente || '—'} | <strong>🛏️ Leito:</strong> ${r.patientBed || '—'} | <strong>🏥 Setor:</strong> ${r.sector || '—'}
-        </div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-          <div class="history-section"><strong>🕒 Horário:</strong><p>${f.phHorario?.value||'—'}</p></div>
-          <div class="history-section"><strong>📱 Acionamento:</strong><p>${f.phAcionamento?.value||'—'}</p></div>
+          <strong>🕒 Horário:</strong> ${f.phHorario?.value||'—'}<br>
+          <strong>👤 Paciente:</strong> ${r.phPaciente || '—'}<br>
+          <strong>🛏️ Leito:</strong> ${r.patientBed || '—'}
         </div>
         <div class="history-section"><strong>📝 Caso:</strong><p>${f.phCaso?.value||'—'}</p></div>
+        <div class="history-section"><strong>📱 Acionamento:</strong><p>${f.phAcionamento?.value||'—'}</p></div>
         <div class="history-section"><strong>❓ Motivo:</strong><p>${f.phMotivo?.value||'—'}</p></div>
         <div class="history-section"><strong>📋 Avaliação:</strong><p>${f.phAvaliacao?.value||'—'}</p></div>
         <div class="history-section"><strong>🤝 Conduta:</strong><p>${f.phConduta?.value||'—'}</p></div>
+        <div class="history-section"><strong>👩‍⚕️ Fisioterapeuta:</strong><p>${r.profName}</p></div>
       </div>`;
     }
 
@@ -1979,13 +1994,14 @@ function generatePHReport() {
     <div class="ph-card">
       <div class="ph-card-header">
         <div class="sos-badge">SOS</div>
-        <div class="ph-card-title">Chamado de Intercorrência</div>
+        <div class="ph-card-title">Chamado de intercorrência</div>
+        <div class="sos-badge">SOS</div>
         <button class="ph-delete-btn" onclick="deletePHReport(\'${r.id}\')">🗑️</button>
       </div>
       <table class="ph-table">
-        <tr><td class="ph-label">🕒 Horário:</td><td class="ph-value">${f.phHorario?.value||'—'}</td></tr>
+        <tr><td class="ph-label">🕒</td><td class="ph-value">${f.phHorario?.value||'—'}</td></tr>
         <tr><td class="ph-label">👤 Paciente:</td><td class="ph-value"><strong>${patientName}</strong></td></tr>
-        <tr><td class="ph-label">🛏️ Leito/Setor:</td><td class="ph-value">${patientBed} / ${patientSector}</td></tr>
+        <tr><td class="ph-label">🛏️ Leito:</td><td class="ph-value">${patientBed}</td></tr>
         <tr><td class="ph-label">📝 Caso:</td><td class="ph-value">${f.phCaso?.value||'—'}</td></tr>
         <tr><td class="ph-label">📱 Acionamento:</td><td class="ph-value">${f.phAcionamento?.value||'—'}</td></tr>
         <tr><td class="ph-label">❓ Motivo:</td><td class="ph-value">${f.phMotivo?.value||'—'}</td></tr>
@@ -1993,7 +2009,6 @@ function generatePHReport() {
         <tr><td class="ph-label">🤝 Conduta:</td><td class="ph-value">${f.phConduta?.value||'—'}</td></tr>
         <tr><td class="ph-label">👩‍⚕️ Fisioterapeuta:</td><td class="ph-value">${r.profName}</td></tr>
       </table>
-}
     </div>`;
   }).join('');
 
