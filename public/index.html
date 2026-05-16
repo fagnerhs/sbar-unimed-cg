@@ -145,7 +145,7 @@
       </div>
       <button class="btn btn-primary" onclick="handleLogin()">Entrar</button>
       <div class="register-link">Não tem conta? <a onclick="showRegister()">Cadastre-se</a></div>
-      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.5</div>
+      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.6</div>
     </div>
     <div id="registerForm" style="display:none;">
       <div class="form-group">
@@ -193,7 +193,7 @@
         </select>
       </div>
       <button class="btn btn-primary" onclick="handleRegister()">Cadastrar</button>
-      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.5</div>
+      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.6</div>
       <div class="register-link">Já tem conta? <a onclick="showLogin()">Fazer Login</a></div>
     </div>
   </div>
@@ -232,20 +232,31 @@
       <h3 style="font-size:18px;margin-bottom:16px;color:var(--primary);">⚙️ Painel Administrativo</h3>
       <div class="admin-stats" id="adminStats"></div>
 
-      <div class="admin-filter" id="adminFilter"></div>
-      <div id="phReportSection" style="margin-bottom:20px; display:none; flex-direction:column; gap:10px; background:#fff; padding:15px; border-radius:12px; border:1px solid #eee;">
+      <div class="admin-filter" id="adminMainTabs" style="margin-bottom:20px; border-bottom:2px solid #eee; padding-bottom:10px;">
+        <button class="admin-filter-btn active" id="adminTabUsers" onclick="switchAdminSubTab('users')">Usuários</button>
+        <button class="admin-filter-btn" id="adminTabProfiles" onclick="switchAdminSubTab('profiles')">Perfis Disponíveis</button>
+      </div>
+
+      <div id="adminUsersSection">
+        <div class="admin-filter" id="adminFilter"></div>
+        <div id="phReportSection" style="margin-bottom:20px; display:none; flex-direction:column; gap:10px; background:#fff; padding:15px; border-radius:12px; border:1px solid #eee;">
         <label style="font-size:13px; font-weight:700; color:#d32f2f;">📊 Relatório de Intercorrências (PH)</label>
         <div style="display:flex; gap:10px;">
           <input type="date" id="phReportDate" class="form-input" style="flex:1;">
           <button class="btn btn-primary" onclick="generatePHReport()" style="flex:1; background:#d32f2f; margin-top:0;">Gerar Relatório</button>
         </div>
         <div id="phReportList" style="margin-top:15px;"></div>
+        </div>
+        <div class="search-bar"><span class="search-icon">🔍</span><input type="text" class="search-input" id="searchUsers" placeholder="Buscar por nome, e-mail ou profissão..." oninput="renderAdminUsers()"></div>
+        <div id="adminUserList"></div>
       </div>
-      <div class="search-bar"><span class="search-icon">🔍</span><input type="text" class="search-input" id="searchUsers" placeholder="Buscar por nome, e-mail ou profissão..." oninput="renderAdminUsers()"></div>
-      <div id="adminUserList"></div>
+
+      <div id="adminProfilesSection" style="display:none;">
+        <div id="adminProfileList"></div>
+      </div>
     </div>
   </div>
-  <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.5</div>
+  <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.6</div>
     <div class="bottom-nav">
     <button class="nav-item active" id="navAtivos" onclick="switchTab('ativos')"><span class="nav-icon">🏥</span>Ativos</button>
     <button class="nav-item" id="navAdd" onclick="showAddPatient()"><span class="nav-icon">➕</span>Novo</button>
@@ -254,7 +265,7 @@
     <button class="nav-item" id="navTodos" onclick="switchTab('todos')"><span class="nav-icon">📋</span>Todos</button>
   </div>
       <button class="fab" onclick="showAddPatient()" title="Adicionar Paciente">+</button>
-      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.5</div>
+      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.6</div>
     </div>
 
 <!-- SBAR FORM SCREEN -->
@@ -1742,9 +1753,59 @@ function setStatusFilter(status, btn) {
   renderAllPatients();
 }
 
+let adminSubTab = 'users';
+function switchAdminSubTab(tab) {
+  adminSubTab = tab;
+  const tabUsers = document.getElementById('adminTabUsers');
+  const tabProfiles = document.getElementById('adminTabProfiles');
+  const secUsers = document.getElementById('adminUsersSection');
+  const secProfiles = document.getElementById('adminProfilesSection');
+  
+  if (tabUsers) tabUsers.classList.toggle('active', tab === 'users');
+  if (tabProfiles) tabProfiles.classList.toggle('active', tab === 'profiles');
+  if (secUsers) secUsers.style.display = tab === 'users' ? 'block' : 'none';
+  if (secProfiles) secProfiles.style.display = tab === 'profiles' ? 'block' : 'none';
+  
+  if (tab === 'profiles') renderAdminProfiles();
+}
+
+function renderAdminProfiles() {
+  const c = document.getElementById('adminProfileList');
+  if (!c) return;
+  
+  const profiles = Object.keys(PROF_CONFIG).map(key => {
+    const cfg = PROF_CONFIG[key];
+    return {
+      key,
+      name: cfg.displayName || key,
+      icon: cfg.icon,
+      color: cfg.color,
+      fields: cfg.assessFields ? cfg.assessFields.length : 0,
+      conducts: cfg.conducts ? cfg.conducts.length : 0,
+      isPH: cfg.isPH || false
+    };
+  });
+
+  c.innerHTML = profiles.map(p => `
+    <div class="admin-card" style="border-left: 4px solid ${p.color}">
+      <div class="admin-card-header">
+        <div class="admin-card-info">
+          <div class="admin-card-name">${p.icon} ${p.name}</div>
+          <div class="admin-card-detail">Chave interna: <code>${p.key}</code></div>
+          <div class="admin-card-detail">
+            ${p.isPH ? '<span class="badge-pending" style="padding:2px 6px; border-radius:4px; font-size:10px; background:#ffebee; color:#c62828;">PERFIL PH</span>' : ''}
+            Campos de Avaliação: ${p.fields} • Condutas: ${p.conducts}
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
 function renderAdminPanel() {
   renderAdminStats();
   renderAdminFilter();
+  switchAdminSubTab(adminSubTab);
   
   // Show PH Report section only for Primary Admin or Physiotherapy Admins
   const phSection = document.getElementById('phReportSection');
