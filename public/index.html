@@ -212,6 +212,7 @@
   <div id="tabAtivos" class="tab-content active">
     <div class="dashboard">
       <div class="sector-filter" id="sectorFilter"></div>
+      <div class="search-bar" id="searchBarContainer"><span class="search-icon">🔍</span><input type="text" class="search-input" id="searchActivePatients" placeholder="Buscar paciente por nome, leito ou setor..." oninput="renderPatients()"></div>
       <div id="patientList"></div>
     </div>
   </div>
@@ -1102,7 +1103,8 @@ function renderPatients() {
   const isPH = getActiveProfKey() === 'Fisioterapia_PH';
   
   if (isPH) {
-    document.getElementById('searchBarContainer').style.display = 'none';
+    const searchBar = document.getElementById('searchBarContainer');
+    if (searchBar) searchBar.style.display = 'none';
     c.innerHTML = `
       <div class="empty-state" style="padding:40px 20px;">
         <div class="icon" style="font-size:64px; margin-bottom:20px;">🚨</div>
@@ -1113,10 +1115,17 @@ function renderPatients() {
       </div>`;
     return;
   }
-  document.getElementById('searchBarContainer').style.display = 'flex';
+  const searchBar = document.getElementById('searchBarContainer');
+  if (searchBar) searchBar.style.display = 'flex';
 
+  const q = (document.getElementById('searchActivePatients')?.value || '').toLowerCase().trim();
   const patients = DB.getPatients().filter(p=>!p.discharged);
-  const filtered = currentSector==='Todos' ? patients : patients.filter(p=>p.sector===currentSector);
+  let filtered = currentSector==='Todos' ? patients : patients.filter(p=>p.sector===currentSector);
+  if (q) filtered = filtered.filter(p =>
+    (p.name || '').toLowerCase().includes(q) ||
+    (p.bed || '').toLowerCase().includes(q) ||
+    (p.sector || '').toLowerCase().includes(q)
+  );
   if (!filtered.length) { c.innerHTML='<div class="empty-state"><div class="icon">📋</div><p>Nenhum paciente ativo neste setor.<br>Toque em + para adicionar.</p></div>'; return; }
   const isPrimaryAdmin = currentUser && currentUser.id === 'admin_001';
   c.innerHTML = filtered.map(p=>`
