@@ -7,10 +7,32 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>SBAR Unimed CG</title>
-  <script>console.log('Frontend Version: 20260515.1');</script>
+  <script>console.log('Frontend Version: 20260515.2');</script>
+  <script>
+    window.onerror = function(message, source, lineno, colno, error) {
+      console.error('Global Error: ', { message, source, lineno, colno, error });
+      alert('Erro: ' + message + ' na linha ' + lineno);
+      return true;
+    };
+  </script>
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" href="/icon-192.png">
   <link rel="apple-touch-icon" href="/icon-192.png">
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for (let registration of registrations) {
+          registration.unregister();
+        }
+      }).then(function() {
+        navigator.serviceWorker.register("/sw.js").then(function(registration) {
+          console.log("Service Worker registered with scope: ", registration.scope);
+        }).catch(function(err) {
+          console.log("Service Worker registration failed: ", err);
+        });
+      });
+    }
+  </script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     :root{--primary:#00995D;--primary-light:#00b36b;--accent:#00bcd4;--success:#2e7d32;--danger:#c62828;--warning:#f57f17;--bg:#f5f5f5;--card-bg:#fff;--text:#212121;--text-light:#757575;--border:#e0e0e0}
