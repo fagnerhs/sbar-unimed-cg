@@ -145,7 +145,7 @@
       </div>
       <button class="btn btn-primary" onclick="handleLogin()">Entrar</button>
       <div class="register-link">Não tem conta? <a onclick="showRegister()">Cadastre-se</a></div>
-      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.7</div>
+      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.8</div>
     </div>
     <div id="registerForm" style="display:none;">
       <div class="form-group">
@@ -177,6 +177,7 @@
           <option value="Lactário">Lactário</option>
           <option value="Fonoaudiologia">Fonoaudiologia</option>
           <option value="Farmácia Clínica">Farmácia Clínica</option>
+          <option value="Médico">Médico</option>
         </select>
       </div>
       <div class="form-group">
@@ -193,7 +194,7 @@
         </select>
       </div>
       <button class="btn btn-primary" onclick="handleRegister()">Cadastrar</button>
-      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.7</div>
+      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.8</div>
       <div class="register-link">Já tem conta? <a onclick="showLogin()">Fazer Login</a></div>
     </div>
   </div>
@@ -259,7 +260,7 @@
       </div>
     </div>
   </div>
-  <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.7</div>
+  <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.8</div>
     <div class="bottom-nav">
     <button class="nav-item active" id="navAtivos" onclick="switchTab('ativos')"><span class="nav-icon">🏥</span>Ativos</button>
     <button class="nav-item" id="navAdd" onclick="showAddPatient()"><span class="nav-icon">➕</span>Novo</button>
@@ -268,7 +269,7 @@
     <button class="nav-item" id="navTodos" onclick="switchTab('todos')"><span class="nav-icon">📋</span>Todos</button>
   </div>
       <button class="fab" onclick="showAddPatient()" title="Adicionar Paciente">+</button>
-      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.7</div>
+      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.8</div>
     </div>
 
 <!-- SBAR FORM SCREEN -->
@@ -861,6 +862,64 @@ const PROF_CONFIG = {
       if(c.farmacovig==='Iniciado') r.push('Acompanhar reações adversas notificadas.');
       return r;
     }
+  },
+  'Médico': {
+    conselho: 'CRM', icon: '👨‍⚕️', color: '#2c3e50',
+    hasSubProfile: true,
+    subProfiles: ['Adulto', 'Neonatal/Pediatria'],
+    assessFields: [
+      { type:'select', id:'nivelConscMed', label:'Nível de Consciência', options:['','Alerta','Sonolento','Torporoso','Comatoso','Sedado'] },
+      { type:'text', id:'sinaisVitaisMed', label:'Sinais Vitais (PA, FC, FR, T, SpO2)', placeholder:'Ex: 120/80, 80, 18, 36.5, 98%' },
+      { type:'text', id:'exameFisico', label:'Exame Físico (Resumo)', placeholder:'Principais achados do exame físico...' },
+      { type:'text', id:'examesLabs', label:'Exames Laboratoriais / Imagem', placeholder:'Principais alterações de exames...' },
+      { type:'text', id:'drogasVasoativas', label:'Drogas Vasoativas / Sedação', placeholder:'Drogas e doses atuais...' },
+      { type:'select', id:'suporteVentMed', label:'Suporte Ventilatório', options:['','Ar Ambiente','Cateter Nasal','CNAF','VNI','VMI','TQT'] },
+      { type:'text', id:'antibioticos', label:'Antibioticoterapia (Dia de uso)', placeholder:'Ex: Meropenem (D5), Vancomicina (D3)...' },
+      { type:'text', id:'pendenciasMed', label:'⚠️ Pendências / Programação', placeholder:'Ex: Avaliação da cirurgia, TC de crânio...' }
+    ],
+    conducts: [
+      { id:'ajusteTerapeutico', label:'Ajuste Terapêutico' },
+      { id:'solicitacaoExames', label:'Solicitação de Exames' },
+      { id:'parecerEspecialista', label:'Parecer de Especialista' },
+      { id:'procedimentoCirurgico', label:'Procedimento Cirúrgico' },
+      { id:'planejamentoAlta', label:'Planejamento de Alta' }
+    ],
+    conductTitle: 'Condutas Médicas - Adulto',
+    autoRec(c){ let r=[];
+      if(c.ajusteTerapeutico==='Iniciado') r.push('Realizar ajustes na prescrição conforme evolução clínica.');
+      if(c.parecerEspecialista==='Iniciado') r.push('Aguardar e avaliar parecer da especialidade solicitada.');
+      return r;
+    }
+  },
+  'Médico_NP': {
+    conselho: 'CRM', icon: '👶', color: '#2c3e50',
+    displayName: 'Médico Neonatal/Pediatria',
+    parentProf: 'Médico',
+    assessFields: [
+      { type:'select', id:'nivelConscMedNP', label:'Nível de Consciência', options:['','Ativo/Reativo','Hipoativo','Letárgico','Não responsivo','Sedado'] },
+      { type:'text', id:'sinaisVitaisMedNP', label:'Sinais Vitais (FC, FR, T, SpO2, PAM)', placeholder:'Ex: 140, 40, 36.8, 96%, 45' },
+      { type:'text', id:'pesoMedNP', label:'Peso Atual (g/kg)', placeholder:'Ex: 1250g ou 3.2kg' },
+      { type:'text', id:'balancoHidrico', label:'Balanço Hídrico / Diurese', placeholder:'Ex: +20ml, diurese 3.5ml/kg/h' },
+      { type:'text', id:'exameFisicoNP', label:'Exame Físico (Resumo)', placeholder:'Principais achados (fontanela, perfusão...)' },
+      { type:'text', id:'examesLabsNP', label:'Exames Laboratoriais / Imagem', placeholder:'Principais alterações...' },
+      { type:'select', id:'suporteVentMedNP', label:'Suporte Ventilatório', options:['','Ar Ambiente','Cateter Nasal','CNAF','CPAP','VNI','VMI','VAFO'] },
+      { type:'text', id:'nutricaoMedNP', label:'Nutrição / Dieta', placeholder:'Ex: NPT, SOG 5ml 3/3h, Seio Materno...' },
+      { type:'text', id:'antibioticosNP', label:'Antibioticoterapia (Dia de uso)', placeholder:'Ex: Ampicilina/Genta (D3)...' },
+      { type:'text', id:'pendenciasMedNP', label:'⚠️ Pendências / Programação', placeholder:'Ex: Eco Doppler, avaliação cirurgia pediátrica...' }
+    ],
+    conducts: [
+      { id:'ajusteTerapeuticoNP', label:'Ajuste Terapêutico' },
+      { id:'solicitacaoExamesNP', label:'Solicitação de Exames' },
+      { id:'parecerEspecialistaNP', label:'Parecer de Especialista' },
+      { id:'ajusteNutricional', label:'Ajuste Nutricional' },
+      { id:'planejamentoAltaNP', label:'Planejamento de Alta' }
+    ],
+    conductTitle: 'Condutas Médicas - Neo/Ped',
+    autoRec(c){ let r=[];
+      if(c.ajusteTerapeuticoNP==='Iniciado') r.push('Ajustar doses e condutas conforme peso e estabilidade clínica.');
+      if(c.ajusteNutricional==='Iniciado') r.push('Progredir ou ajustar dieta conforme tolerância e ganho ponderal.');
+      return r;
+    }
   }
 };
 
@@ -877,6 +936,7 @@ let selectedDischargeType = 'casa';
 let readmitTarget = null;
 let enfSubProfile = localStorage.getItem('sbar_enf_subprofile') || 'Adulto';
 let fisioSubProfile = localStorage.getItem('sbar_fisio_subprofile') || 'Adulto';
+let medSubProfile = localStorage.getItem('sbar_med_subprofile') || 'Adulto';
 
 // Get the active profession key (handles nursing sub-profiles)
 function getActiveProfKey() {
@@ -888,6 +948,9 @@ function getActiveProfKey() {
     if (fisioSubProfile === 'Neonatal/Pediatria') return 'Fisioterapia_NP';
     if (fisioSubProfile === 'PH') return 'Fisioterapia_PH';
     return 'Fisioterapia';
+  }
+  if (currentUser.profissao === 'Médico') {
+    return medSubProfile === 'Neonatal/Pediatria' ? 'Médico_NP' : 'Médico';
   }
   return currentUser.profissao;
 }
@@ -1040,12 +1103,15 @@ function showDashboard() {
   const isEnf = currentUser.profissao === 'Enfermagem';
   let displayText = isAdmin ? `⚙️ ${currentUser.name} • Administrador` : `${cfg.icon||''} ${currentUser.name} • ${getActiveProfDisplay()} • ${currentUser.conselho}`;
   const isFisio = currentUser.profissao === 'Fisioterapia';
+  const isMed = currentUser.profissao === 'Médico';
   let toggleBtn = '';
   if (isEnf) {
     toggleBtn = ` <button onclick="toggleEnfProfile()" style="background:rgba(255,255,255,0.25);border:none;color:#fff;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;margin-left:8px;cursor:pointer;">🔄 ${enfSubProfile==='Adulto'?'Trocar p/ PED':'Trocar p/ Adulto'}</button>`;
   } else if (isFisio) {
     const next = fisioSubProfile === 'Adulto' ? 'Neonatal/Pediatria' : (fisioSubProfile === 'Neonatal/Pediatria' ? 'PH' : 'Adulto');
     toggleBtn = ` <button onclick="toggleFisioProfile()" style="background:rgba(255,255,255,0.25);border:none;color:#fff;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;margin-left:8px;cursor:pointer;">🔄 Trocar p/ ${next}</button>`;
+  } else if (isMed) {
+    toggleBtn = ` <button onclick="toggleMedProfile()" style="background:rgba(255,255,255,0.25);border:none;color:#fff;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;margin-left:8px;cursor:pointer;">🔄 ${medSubProfile==='Adulto'?'Trocar p/ PED':'Trocar p/ Adulto'}</button>`;
   }
   document.getElementById('userDisplay').innerHTML = displayText + toggleBtn;
   // Show/hide admin tab (visible for admin and delegated admins)
@@ -1080,6 +1146,13 @@ function toggleFisioProfile() {
   localStorage.setItem('sbar_fisio_subprofile', fisioSubProfile);
   showDashboard();
   showToast(`Perfil alterado para: Fisioterapia ${fisioSubProfile}`);
+}
+
+function toggleMedProfile() {
+  medSubProfile = medSubProfile === 'Adulto' ? 'Neonatal/Pediatria' : 'Adulto';
+  localStorage.setItem('sbar_med_subprofile', medSubProfile);
+  showDashboard();
+  showToast(`Perfil alterado para: Médico ${medSubProfile}`);
 }
 
 function renderSectorFilter() {

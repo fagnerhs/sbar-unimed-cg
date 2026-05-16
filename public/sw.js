@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sbar-unimed-v9';
+const CACHE_NAME = 'sbar-unimed-v10';
 const urlsToCache = [
   '/',
   '/index.html',
