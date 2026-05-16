@@ -145,7 +145,7 @@
       </div>
       <button class="btn btn-primary" onclick="handleLogin()">Entrar</button>
       <div class="register-link">Não tem conta? <a onclick="showRegister()">Cadastre-se</a></div>
-      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.3</div>
+      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.4</div>
     </div>
     <div id="registerForm" style="display:none;">
       <div class="form-group">
@@ -193,7 +193,7 @@
         </select>
       </div>
       <button class="btn btn-primary" onclick="handleRegister()">Cadastrar</button>
-      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.3</div>
+      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.4</div>
       <div class="register-link">Já tem conta? <a onclick="showLogin()">Fazer Login</a></div>
     </div>
   </div>
@@ -244,7 +244,7 @@
       <div id="adminUserList"></div>
     </div>
   </div>
-  <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.3</div>
+  <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.4</div>
     <div class="bottom-nav">
     <button class="nav-item active" id="navAtivos" onclick="switchTab('ativos')"><span class="nav-icon">🏥</span>Ativos</button>
     <button class="nav-item" id="navAdd" onclick="showAddPatient()"><span class="nav-icon">➕</span>Novo</button>
@@ -253,7 +253,7 @@
     <button class="nav-item" id="navTodos" onclick="switchTab('todos')"><span class="nav-icon">📋</span>Todos</button>
   </div>
       <button class="fab" onclick="showAddPatient()" title="Adicionar Paciente">+</button>
-      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.3</div>
+      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.4</div>
     </div>
 
 <!-- SBAR FORM SCREEN -->
@@ -1089,25 +1089,10 @@ function renderSectorFilter() {
   }
 
   let h = '';
-  // Adicionar "Todos" primeiro para facilitar
   h += `<div class="sector-chip ${currentSector==='Todos'?'active':''}" onclick="filterSector('Todos')">Todos</div>`;
   allSectors.forEach(s => {
     h += `<div class="sector-chip ${currentSector===s?'active':''}" onclick="filterSector('${s}')">${s}</div>`;
   });
-  c.innerHTML = h;
-}
-  
-  let h = '';
-  // Build sector list with user's sector first
-  const userSetor = currentUser ? currentUser.setor : '';
-  let allSectors = [];
-  for (const [g, ss] of Object.entries(SECTORS)) ss.forEach(s => allSectors.push(s));
-  // Move user's sector to front
-  if (userSetor && allSectors.includes(userSetor)) {
-    allSectors = [userSetor, ...allSectors.filter(s => s !== userSetor)];
-  }
-  allSectors.forEach(s => { h += `<div class="sector-chip ${currentSector===s?'active':''}" onclick="filterSector('${s}')">${s}</div>`; });
-  h += `<div class="sector-chip ${currentSector==='Todos'?'active':''}" onclick="filterSector('Todos')">Todos</div>`;
   c.innerHTML = h;
 }
 function filterSector(s) { currentSector=s; renderSectorFilter(); renderPatients(); }
