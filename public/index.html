@@ -1975,11 +1975,13 @@ function generatePHReport() {
         <tr><td class="ph-label">🤝 Conduta:</td><td class="ph-value">${f.phConduta?.value||'—'}</td></tr>
         <tr><td class="ph-label">👩‍⚕️ Fisioterapeuta:</td><td class="ph-value">${r.profName}</td></tr>
       </table>
+}
     </div>`;
   }).join('');
 
   document.getElementById("phReportList").innerHTML = cards;
   showToast(`Relatório PH gerado para ${targetDateStr}.`);
+}
 
 async function deletePHReport(id) {
   if (!confirm("Tem certeza que deseja excluir este relatório PH?")) return;
