@@ -116,11 +116,14 @@ async function initStorage() {
       console.log(`Using MongoDB Atlas for data storage with URI: ${MONGO_URI}`);
       return;
     } catch (e) {
-      console.error("MongoDB connection failed:", e.message);
-      console.log("Falling back to JSON file storage...");
+      console.error("CRITICAL: MongoDB connection failed:", e.message);
+      if (process.env.NODE_ENV === 'production') {
+        console.error("Exiting due to failed MongoDB connection in production.");
+        process.exit(1);
+      }
+      console.log("Falling back to JSON file storage (development only)...");
       jsonStorage.init();
       storage = jsonStorage;
-      console.log("Using JSON file storage (MongoDB connection failed).");
     }
   } else {
     console.log("No MONGO_URI set. Falling back to JSON file storage...");
