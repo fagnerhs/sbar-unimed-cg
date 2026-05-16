@@ -145,7 +145,7 @@
       </div>
       <button class="btn btn-primary" onclick="handleLogin()">Entrar</button>
       <div class="register-link">Não tem conta? <a onclick="showRegister()">Cadastre-se</a></div>
-      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.6</div>
+      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.7</div>
     </div>
     <div id="registerForm" style="display:none;">
       <div class="form-group">
@@ -193,7 +193,7 @@
         </select>
       </div>
       <button class="btn btn-primary" onclick="handleRegister()">Cadastrar</button>
-      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.6</div>
+      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.7</div>
       <div class="register-link">Já tem conta? <a onclick="showLogin()">Fazer Login</a></div>
     </div>
   </div>
@@ -241,9 +241,12 @@
         <div class="admin-filter" id="adminFilter"></div>
         <div id="phReportSection" style="margin-bottom:20px; display:none; flex-direction:column; gap:10px; background:#fff; padding:15px; border-radius:12px; border:1px solid #eee;">
         <label style="font-size:13px; font-weight:700; color:#d32f2f;">📊 Relatório de Intercorrências (PH)</label>
-        <div style="display:flex; gap:10px;">
-          <input type="date" id="phReportDate" class="form-input" style="flex:1;">
-          <button class="btn btn-primary" onclick="generatePHReport()" style="flex:1; background:#d32f2f; margin-top:0;">Gerar Relatório</button>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <input type="date" id="phReportDate" class="form-input">
+          <div style="display:flex; gap:10px;">
+            <button class="btn btn-primary" onclick="generatePHReport()" style="flex:1; background:#d32f2f; margin-top:0;">Gerar Relatório</button>
+            <button id="btnExportPH" class="btn btn-outline" onclick="exportPHReportPDF()" style="flex:1; border-color:#d32f2f; color:#d32f2f; display:none;">📄 Exportar PDF</button>
+          </div>
         </div>
         <div id="phReportList" style="margin-top:15px;"></div>
         </div>
@@ -256,7 +259,7 @@
       </div>
     </div>
   </div>
-  <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.6</div>
+  <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.7</div>
     <div class="bottom-nav">
     <button class="nav-item active" id="navAtivos" onclick="switchTab('ativos')"><span class="nav-icon">🏥</span>Ativos</button>
     <button class="nav-item" id="navAdd" onclick="showAddPatient()"><span class="nav-icon">➕</span>Novo</button>
@@ -265,7 +268,7 @@
     <button class="nav-item" id="navTodos" onclick="switchTab('todos')"><span class="nav-icon">📋</span>Todos</button>
   </div>
       <button class="fab" onclick="showAddPatient()" title="Adicionar Paciente">+</button>
-      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.6</div>
+      <div class="footer-credits">Desenvolvido por Fisioterapeuta Fagner Sato<br>Versão Frontend: 20260516.7</div>
     </div>
 
 <!-- SBAR FORM SCREEN -->
@@ -2074,7 +2077,94 @@ function generatePHReport() {
   }).join('');
 
   document.getElementById("phReportList").innerHTML = cards;
+  document.getElementById("btnExportPH").style.display = 'flex';
   showToast(`Relatório PH gerado para ${targetDateStr}.`);
+}
+
+function exportPHReportPDF() {
+  const allSbar = DB.getSBAR();
+  const selectedDateVal = document.getElementById('phReportDate').value;
+  
+  let targetDateStr;
+  if (selectedDateVal) {
+    const [y, m, d] = selectedDateVal.split('-');
+    targetDateStr = `${d}/${m}/${y}`;
+  } else {
+    targetDateStr = new Date().toLocaleDateString('pt-BR');
+  }
+  
+  const phRecords = allSbar.filter(r => {
+    const cfg = PROF_CONFIG[r.profKey] || PROF_CONFIG[r.profissao] || {};
+    const date = new Date(r.timestamp).toLocaleDateString('pt-BR');
+    return cfg.isPH && date === targetDateStr;
+  });
+
+  if (!phRecords.length) { showToast('Nenhum registro para exportar'); return; }
+
+  const totalAcionamentos = phRecords.length;
+  const logoUrl = window.location.origin + '/unimed-logo.png';
+  
+  let contentHtml = '';
+  phRecords.forEach((r, idx) => {
+    const f = r.sbar.a.fields || {};
+    const patientName = f.phPaciente?.value || r.phPaciente || '—';
+    
+    contentHtml += `
+    <div class="ph-report-item" style="margin-bottom: 30px; border: 1px solid #d32f2f; border-radius: 8px; overflow: hidden; page-break-inside: avoid;">
+      <div style="background: #d32f2f; color: #fff; padding: 10px; display: flex; justify-content: space-between; align-items: center; font-weight: bold;">
+        <span>🚨 SOS</span>
+        <span>CHAMADO DE INTERCORRÊNCIA #${idx + 1}</span>
+        <span>SOS 🚨</span>
+      </div>
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+        <tr><td style="padding: 8px; border-bottom: 1px solid #eee; width: 30%; font-weight: bold; background: #fafafa;">🕒 Horário:</td><td style="padding: 8px; border-bottom: 1px solid #eee;">${f.phHorario?.value||'—'}</td></tr>
+        <tr><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold; background: #fafafa;">👤 Paciente:</td><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>${patientName}</strong></td></tr>
+        <tr><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold; background: #fafafa;">🛏️ Leito:</td><td style="padding: 8px; border-bottom: 1px solid #eee;">${f.phLeito?.value||'—'}</td></tr>
+        <tr><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold; background: #fafafa;">📝 Caso:</td><td style="padding: 8px; border-bottom: 1px solid #eee;">${f.phCaso?.value||'—'}</td></tr>
+        <tr><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold; background: #fafafa;">📱 Acionamento:</td><td style="padding: 8px; border-bottom: 1px solid #eee;">${f.phAcionamento?.value||'—'}</td></tr>
+        <tr><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold; background: #fafafa;">❓ Motivo:</td><td style="padding: 8px; border-bottom: 1px solid #eee;">${f.phMotivo?.value||'—'}</td></tr>
+        <tr><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold; background: #fafafa;">📋 Avaliação:</td><td style="padding: 8px; border-bottom: 1px solid #eee;">${f.phAvaliacao?.value||'—'}</td></tr>
+        <tr><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold; background: #fafafa;">🤝 Conduta:</td><td style="padding: 8px; border-bottom: 1px solid #eee;">${f.phConduta?.value||'—'}</td></tr>
+        <tr><td style="padding: 8px; font-weight: bold; background: #fafafa;">👩‍⚕️ Fisioterapeuta:</td><td style="padding: 8px;">${r.profName}</td></tr>
+      </table>
+    </div>`;
+  });
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório PH - ${targetDateStr}</title>
+    <style>
+      @media print { body { margin: 0; padding: 10px; } .no-print { display: none; } }
+      body { font-family: Arial, sans-serif; padding: 20px; color: #333; line-height: 1.4; }
+      .pdf-header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; border-bottom: 3px solid #d32f2f; padding-bottom: 12px; }
+      .pdf-header img { height: 50px; }
+      .pdf-header-text h1 { color: #d32f2f; font-size: 20px; margin: 0; }
+      .pdf-header-text h2 { color: #666; font-size: 14px; font-weight: normal; margin: 4px 0 0 0; }
+      .summary-box { background: #fff5f5; border: 1px solid #feb2b2; border-radius: 8px; padding: 15px; margin-bottom: 25px; text-align: center; }
+      .summary-count { font-size: 24px; font-weight: bold; color: #d32f2f; }
+      .summary-label { font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+    </style></head><body>
+    <div class="pdf-header">
+      <img src="${logoUrl}" alt="Unimed">
+      <div class="pdf-header-text">
+        <h1>Relatório de Intercorrências (PH)</h1>
+        <h2>Data: ${targetDateStr} | Gerado em: ${new Date().toLocaleString('pt-BR')}</h2>
+      </div>
+    </div>
+    
+    <div class="summary-box">
+      <div class="summary-label">Total de Acionamentos no Dia</div>
+      <div class="summary-count">${totalAcionamentos}</div>
+    </div>
+
+    <div class="reports-container">
+      ${contentHtml}
+    </div>
+
+    <script>window.onload=function(){ window.print(); window.onafterprint = function(){ window.close(); }; }<\/script>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
 }
 
 async function deletePHReport(id) {
